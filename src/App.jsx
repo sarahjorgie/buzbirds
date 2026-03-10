@@ -121,7 +121,10 @@ export default function App() {
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [dailyOpen, setDailyOpen]       = useState(false)
 
-  const abortRef = useRef(null)
+  const abortRef    = useRef(null)
+  const touchStartX = useRef(null)
+  const touchStartY = useRef(null)
+  const didSwipe    = useRef(false)
   const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection } = useProgress()
 
   // ── Preload all province/group IDs silently on startup ────────────────
@@ -526,12 +529,28 @@ export default function App() {
         </div>
 
         {/* Flashcard */}
-        <div className="w-full max-w-md">
+        <div
+          className="w-full max-w-md"
+          onTouchStart={e => {
+            touchStartX.current = e.touches[0].clientX
+            touchStartY.current = e.touches[0].clientY
+            didSwipe.current = false
+          }}
+          onTouchEnd={e => {
+            const dx = e.changedTouches[0].clientX - touchStartX.current
+            const dy = e.changedTouches[0].clientY - touchStartY.current
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+              didSwipe.current = true
+              if (dx < 0) handleNext()
+              else handlePrev()
+            }
+          }}
+        >
           <FlashCard
             key={current?.taxon?.id}
             species={current}
             flipped={flipped}
-            onFlip={() => setFlipped(f => !f)}
+            onFlip={() => { if (!didSwipe.current) setFlipped(f => !f) }}
           />
         </div>
 
