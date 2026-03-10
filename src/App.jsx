@@ -129,6 +129,25 @@ export default function App() {
   const didSwipe      = useRef(false)
   const animatingRef  = useRef(false)
   const deckLengthRef = useRef(1)
+  const cardWrapperRef = useRef(null)
+
+  // Non-passive touchmove so we can preventDefault for horizontal swipes.
+  // React synthetic handlers are passive — iOS Safari ignores preventDefault there.
+  useEffect(() => {
+    const el = cardWrapperRef.current
+    if (!el) return
+    const onMove = (e) => {
+      if (animatingRef.current || touchStartX.current === null) return
+      const dx = e.touches[0].clientX - touchStartX.current
+      const dy = e.touches[0].clientY - touchStartY.current
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+        e.preventDefault()
+        setCardAnim({ x: dx, rotate: dx / 25, transition: false })
+      }
+    }
+    el.addEventListener('touchmove', onMove, { passive: false })
+    return () => el.removeEventListener('touchmove', onMove)
+  }, [])
   const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection } = useProgress()
 
   // ── Preload all province/group IDs silently on startup ────────────────
@@ -567,9 +586,10 @@ export default function App() {
 
         {/* Flashcard */}
         <div
+          ref={cardWrapperRef}
           className="w-full max-w-md"
           style={{
-            touchAction: 'pan-y',
+            touchAction: 'manipulation',
             transform: `translateX(${cardAnim.x}px) rotate(${cardAnim.rotate}deg)`,
             transition: cardAnim.transition ? 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none',
             willChange: 'transform',
@@ -580,14 +600,6 @@ export default function App() {
             touchStartY.current = e.touches[0].clientY
             didSwipe.current = false
           }}
-          onTouchMove={e => {
-            if (animatingRef.current) return
-            const dx = e.touches[0].clientX - touchStartX.current
-            const dy = e.touches[0].clientY - touchStartY.current
-            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
-              setCardAnim({ x: dx, rotate: dx / 25, transition: false })
-            }
-          }}
           onTouchEnd={e => {
             if (animatingRef.current) return
             const dx = e.changedTouches[0].clientX - touchStartX.current
@@ -596,7 +608,6 @@ export default function App() {
               didSwipe.current = true
               swipeNavigate(dx < 0 ? 'left' : 'right')
             } else {
-              // Snap back to center
               setCardAnim({ x: 0, rotate: 0, transition: true })
             }
           }}
