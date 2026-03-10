@@ -6,6 +6,7 @@ import QuizMode from './components/QuizMode'
 import Collection from './components/Collection'
 import DailyChallenge from './components/DailyChallenge'
 import { useProgress } from './hooks/useProgress'
+import WelcomeMessage, { hasSeenWelcome } from './components/WelcomeMessage'
 import { SA_PROVINCES } from './data/provinces'
 import { BIRD_GROUPS } from './data/birdGroups'
 import { resolvePlaceId, resolveTaxonId, preloadIds } from './utils/apiLookup'
@@ -120,6 +121,7 @@ export default function App() {
   const [quizOpen, setQuizOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [dailyOpen, setDailyOpen]       = useState(false)
+  const [welcomeOpen, setWelcomeOpen]   = useState(() => !hasSeenWelcome())
 
   const [cardAnim, setCardAnim] = useState({ x: 0, rotate: 0, transition: false })
 
@@ -407,6 +409,8 @@ export default function App() {
 
   return (
     <>
+      {welcomeOpen && <WelcomeMessage onClose={() => setWelcomeOpen(false)} />}
+
       {quizOpen && (
         <QuizMode
           species={species}
@@ -452,9 +456,18 @@ export default function App() {
         <header className="w-full max-w-md mb-4">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-white leading-tight">
-                BuzBirds
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-white leading-tight">BuzBirds</h1>
+                <button
+                  onClick={() => setWelcomeOpen(true)}
+                  title="A note for you"
+                  className="text-rose-400/50 hover:text-rose-400 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+              </div>
               <div className="flex items-center gap-1.5 flex-wrap mt-1">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
                 <span className="text-green-400 text-xs">
