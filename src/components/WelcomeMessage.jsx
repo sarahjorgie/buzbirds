@@ -64,6 +64,14 @@ export default function WelcomeMessage({ onClose }) {
               <span className="text-white/85 not-italic font-medium">Sezzies</span>
             </p>
 
+            <div className="rounded-2xl overflow-hidden mt-2 mb-1">
+              <img
+                src="/safari-fam.jpg"
+                alt="Our family"
+                className="w-full object-cover"
+              />
+            </div>
+
           </div>
         </div>
 
