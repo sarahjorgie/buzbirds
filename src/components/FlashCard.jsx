@@ -28,31 +28,35 @@ function AudioPlayer({ call, active }) {
     }
   }
 
+  const stopProp = e => { e.stopPropagation(); e.preventDefault() }
+
   return (
     <div
-      className="w-full bg-white/8 border border-white/10 rounded-xl px-4 py-3"
+      className="w-full bg-white/8 border border-white/10 rounded-xl px-4 py-4"
       onClick={e => e.stopPropagation()}
+      onTouchStart={stopProp}
+      onTouchEnd={stopProp}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <button
           onClick={toggle}
-          className="w-9 h-9 rounded-full bg-green-600 hover:bg-green-500 flex items-center justify-center shrink-0 transition-colors"
+          className="w-14 h-14 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-400 flex items-center justify-center shrink-0 transition-colors shadow-lg"
         >
           {playing ? (
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
           ) : (
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
             </svg>
           )}
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-white/70 text-xs capitalize truncate">{call.type || 'call'}</p>
-          <p className="text-white/30 text-[10px] truncate">Xeno-canto · {call.recorder}</p>
+          <p className="text-white/70 text-sm capitalize truncate">{call.type || 'call'}</p>
+          <p className="text-white/30 text-xs truncate">{call.recorder}</p>
         </div>
-        <span className="text-white/20 text-[10px] shrink-0">Q:{call.quality}</span>
+        <span className="text-white/20 text-xs shrink-0">Q:{call.quality}</span>
       </div>
       <audio ref={audioRef} src={call.url} onEnded={() => setPlaying(false)} preload="none" />
     </div>
@@ -180,11 +184,11 @@ export default function FlashCard({ species, flipped, onFlip }) {
           {photos?.length > 1 && (
             <>
               <button
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center z-10 text-xl leading-none"
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center z-10 text-2xl leading-none active:bg-black/70"
                 onClick={goPrev}
               >‹</button>
               <button
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center z-10 text-xl leading-none"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center z-10 text-2xl leading-none active:bg-black/70"
                 onClick={goNext}
               >›</button>
               <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
