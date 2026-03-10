@@ -54,7 +54,7 @@ function LoadingScreen({ loaded, total, page, message }) {
         />
       </div>
       <p className="text-white/50 text-sm">
-        {loaded > 0 ? `${loaded} species loaded (page ${page})` : 'Connecting to iNaturalist…'}
+        {loaded > 0 ? `${loaded} species loaded` : 'Loading…'}
       </p>
     </div>
   )
