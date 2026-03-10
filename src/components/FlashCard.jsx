@@ -7,9 +7,9 @@ import { fetchBirdCall } from '../utils/xencanto'
 // ── Audio player ───────────────────────────────────────────────────────────
 function AudioPlayer({ call, active }) {
   const [playing, setPlaying] = useState(false)
+  const [ready, setReady]     = useState(false)
   const audioRef = useRef(null)
 
-  // Pause when card flips back
   useEffect(() => {
     if (!active) {
       audioRef.current?.pause()
@@ -19,12 +19,12 @@ function AudioPlayer({ call, active }) {
 
   const toggle = () => {
     const audio = audioRef.current
-    if (!audio) return
+    if (!audio || !ready) return
     if (playing) {
       audio.pause()
       setPlaying(false)
     } else {
-      audio.play().then(() => setPlaying(true)).catch(err => console.warn('Audio play failed:', err, audio.src))
+      audio.play().then(() => setPlaying(true)).catch(err => console.warn('Audio play failed:', err))
     }
   }
 
@@ -32,33 +32,34 @@ function AudioPlayer({ call, active }) {
 
   return (
     <div
-      className="w-full bg-white/8 border border-white/10 rounded-xl px-4 py-4"
+      className="flex justify-center"
       onClick={e => e.stopPropagation()}
       onTouchStart={stopProp}
       onTouchEnd={stopProp}
     >
-      <div className="flex items-center gap-4">
-        <button
-          onClick={toggle}
-          className="w-14 h-14 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-400 flex items-center justify-center shrink-0 transition-colors shadow-lg"
-        >
-          {playing ? (
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-          ) : (
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-            </svg>
-          )}
-        </button>
-        <div className="flex-1 min-w-0">
-          <p className="text-white/70 text-sm capitalize truncate">{call.type || 'call'}</p>
-          <p className="text-white/30 text-xs truncate">{call.recorder}</p>
-        </div>
-        <span className="text-white/20 text-xs shrink-0">Q:{call.quality}</span>
-      </div>
-      <audio ref={audioRef} src={call.url} onEnded={() => setPlaying(false)} preload="none" />
+      <button
+        onClick={toggle}
+        className="w-16 h-16 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-400 flex items-center justify-center transition-colors shadow-lg"
+      >
+        {!ready ? (
+          <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+        ) : playing ? (
+          <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        ) : (
+          <svg className="w-7 h-7 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+          </svg>
+        )}
+      </button>
+      <audio
+        ref={audioRef}
+        src={call.url}
+        onEnded={() => setPlaying(false)}
+        onCanPlay={() => setReady(true)}
+        preload="auto"
+      />
     </div>
   )
 }
@@ -180,8 +181,8 @@ export default function FlashCard({ species, flipped, onFlip }) {
             />
           )}
 
-          {/* Photo nav arrows + dots (only when multiple photos loaded) */}
-          {photos?.length > 1 && (
+          {/* Photo nav arrows + dots (only when multiple photos loaded and on front) */}
+          {photos?.length > 1 && !flipped && (
             <>
               <button
                 className="absolute left-2 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/50 backdrop-blur-sm text-white flex items-center justify-center z-10 text-2xl leading-none active:bg-black/70"
