@@ -116,7 +116,7 @@ export default function App() {
   const [flipped, setFlipped]     = useState(false)
   const [shuffled, setShuffled]   = useState(false)
   const [menuOpen, setMenuOpen]         = useState(false)
-  const [hideKnown, setHideKnown]       = useState(false)
+  const [hideKnown, setHideKnown]       = useState(true)
   const [quizOpen, setQuizOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [dailyOpen, setDailyOpen]       = useState(false)
