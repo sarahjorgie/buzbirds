@@ -121,10 +121,14 @@ export default function App() {
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [dailyOpen, setDailyOpen]       = useState(false)
 
-  const abortRef    = useRef(null)
-  const touchStartX = useRef(null)
-  const touchStartY = useRef(null)
-  const didSwipe    = useRef(false)
+  const [cardAnim, setCardAnim] = useState({ x: 0, rotate: 0, transition: false })
+
+  const abortRef      = useRef(null)
+  const touchStartX   = useRef(null)
+  const touchStartY   = useRef(null)
+  const didSwipe      = useRef(false)
+  const animatingRef  = useRef(false)
+  const deckLengthRef = useRef(1)
   const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection } = useProgress()
 
   // ── Preload all province/group IDs silently on startup ────────────────
@@ -263,13 +267,43 @@ export default function App() {
 
   const handleNext = useCallback(() => {
     setFlipped(false)
+    setCardAnim({ x: 0, rotate: 0, transition: false })
     setTimeout(() => setCardIndex(i => (i + 1) % Math.max(1, deck.length)), 120)
   }, [deck.length])
 
   const handlePrev = useCallback(() => {
     setFlipped(false)
+    setCardAnim({ x: 0, rotate: 0, transition: false })
     setTimeout(() => setCardIndex(i => (i - 1 + deck.length) % Math.max(1, deck.length)), 120)
   }, [deck.length])
+
+  const swipeNavigate = useCallback((direction) => {
+    if (animatingRef.current) return
+    animatingRef.current = true
+
+    const exitX  = direction === 'left' ? -750 : 750
+    const enterX = direction === 'left' ?  750 : -750
+
+    // 1. Fly current card off-screen
+    setCardAnim({ x: exitX, rotate: exitX / 35, transition: true })
+
+    setTimeout(() => {
+      // 2. Swap to next card, position it off-screen (no transition)
+      setFlipped(false)
+      if (direction === 'left') {
+        setCardIndex(i => (i + 1) % Math.max(1, deckLengthRef.current))
+      } else {
+        setCardIndex(i => (i - 1 + deckLengthRef.current) % Math.max(1, deckLengthRef.current))
+      }
+      setCardAnim({ x: enterX, rotate: 0, transition: false })
+
+      // 3. On next frame, animate new card to center
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        setCardAnim({ x: 0, rotate: 0, transition: true })
+        setTimeout(() => { animatingRef.current = false }, 320)
+      }))
+    }, 280)
+  }, [])
 
   const handleShuffle = () => {
     setFlipped(false)
@@ -348,6 +382,9 @@ export default function App() {
   const activeProvince = SA_PROVINCES.find(p => p.key === filters.provinceKey)
   const activeGroup    = BIRD_GROUPS.find(g => g.id    === filters.groupId)
   const filtersActive  = filters.placeId !== 113055 || filters.taxonId !== 3
+
+  // Keep ref in sync so swipeNavigate setTimeout doesn't stale-close over deck length
+  deckLengthRef.current = visibleDeck.length
 
   return (
     <>
@@ -531,19 +568,36 @@ export default function App() {
         {/* Flashcard */}
         <div
           className="w-full max-w-md"
-          style={{ touchAction: 'pan-y' }}
+          style={{
+            touchAction: 'pan-y',
+            transform: `translateX(${cardAnim.x}px) rotate(${cardAnim.rotate}deg)`,
+            transition: cardAnim.transition ? 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none',
+            willChange: 'transform',
+          }}
           onTouchStart={e => {
+            if (animatingRef.current) return
             touchStartX.current = e.touches[0].clientX
             touchStartY.current = e.touches[0].clientY
             didSwipe.current = false
           }}
+          onTouchMove={e => {
+            if (animatingRef.current) return
+            const dx = e.touches[0].clientX - touchStartX.current
+            const dy = e.touches[0].clientY - touchStartY.current
+            if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 6) {
+              setCardAnim({ x: dx, rotate: dx / 25, transition: false })
+            }
+          }}
           onTouchEnd={e => {
+            if (animatingRef.current) return
             const dx = e.changedTouches[0].clientX - touchStartX.current
             const dy = e.changedTouches[0].clientY - touchStartY.current
-            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+            if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)) {
               didSwipe.current = true
-              if (dx < 0) handleNext()
-              else handlePrev()
+              swipeNavigate(dx < 0 ? 'left' : 'right')
+            } else {
+              // Snap back to center
+              setCardAnim({ x: 0, rotate: 0, transition: true })
             }
           }}
         >
