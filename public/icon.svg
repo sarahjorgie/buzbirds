@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#064e3b"/>
+
+  <!-- Bird silhouette — simple flying bird shape -->
+  <g fill="#34d399">
+    <!-- Body -->
+    <ellipse cx="256" cy="272" rx="72" ry="44"/>
+    <!-- Head -->
+    <circle cx="312" cy="238" r="32"/>
+    <!-- Beak -->
+    <polygon points="340,232 372,244 340,252"/>
+    <!-- Tail -->
+    <polygon points="184,272 148,248 148,296"/>
+    <!-- Wing up -->
+    <path d="M220,240 Q200,180 300,160 Q260,200 256,240Z"/>
+    <!-- Wing lower -->
+    <path d="M220,280 Q180,320 140,308 Q180,276 220,268Z"/>
+    <!-- Eye -->
+    <circle cx="318" cy="232" r="5" fill="#064e3b"/>
+  </g>
+
+  <!-- App name -->
+  <text x="256" y="370" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="white" text-anchor="middle" letter-spacing="-1">BuzBirds</text>
+</svg>
