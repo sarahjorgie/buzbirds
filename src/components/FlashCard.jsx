@@ -323,8 +323,7 @@ export default function FlashCard({ species, flipped, onFlip }) {
           </div>
 
           {/* Footer */}
-          <div className="relative px-5 py-2 border-t border-white/10 flex items-center justify-between shrink-0">
-            <span className="text-white/30 text-xs">{obsCount} observations</span>
+          <div className="relative px-5 py-2 border-t border-white/10 flex items-center justify-center shrink-0">
             <span className="text-white/20 text-xs">Tap to flip back</span>
           </div>
         </div>
