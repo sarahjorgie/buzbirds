@@ -47,6 +47,7 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
       <div
         ref={drawerRef}
         className={`fixed left-0 top-0 bottom-0 w-80 max-w-[90vw] bg-gray-950 border-r border-white/10 z-50 flex flex-col transition-transform duration-300 ease-out ${open ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">

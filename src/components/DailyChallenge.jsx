@@ -173,7 +173,7 @@ export default function DailyChallenge({ species, onClose, addToCollection }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
       {/* ── INTRO ──────────────────────────────────────────────────────── */}
       {phase === 'intro' && (

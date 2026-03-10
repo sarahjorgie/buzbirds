@@ -387,7 +387,7 @@ export default function App() {
         onClearProgress={clearProgress}
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col items-center px-4 py-5">
+      <div className="min-h-screen bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col items-center px-4 py-5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
 
         {/* Header */}
         <header className="w-full max-w-md mb-4">

@@ -73,7 +73,7 @@ export default function Collection({ collected, totalSpecies, onClose, onClearCo
   const pct = totalSpecies > 0 ? Math.round((count / totalSpecies) * 100) : 0
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col">
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-white/10 shrink-0">
