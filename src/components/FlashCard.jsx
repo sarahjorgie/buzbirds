@@ -28,17 +28,19 @@ function AudioPlayer({ call, active }) {
     }
   }
 
-  const stopProp = e => { e.stopPropagation(); e.preventDefault() }
+  // Handle tap on iOS: use onTouchEnd on the button itself so preventDefault
+  // stops the ghost click, while stopPropagation prevents card from flipping.
+  const handleTap = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    toggle()
+  }
 
   return (
-    <div
-      className="flex justify-center"
-      onClick={e => e.stopPropagation()}
-      onTouchStart={stopProp}
-      onTouchEnd={stopProp}
-    >
+    <div className="flex justify-center" onClick={e => e.stopPropagation()}>
       <button
         onClick={toggle}
+        onTouchEnd={handleTap}
         className="w-16 h-16 rounded-full bg-green-600 hover:bg-green-500 active:bg-green-400 flex items-center justify-center transition-colors shadow-lg"
       >
         {!ready ? (
