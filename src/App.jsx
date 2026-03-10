@@ -531,6 +531,7 @@ export default function App() {
         {/* Flashcard */}
         <div
           className="w-full max-w-md"
+          style={{ touchAction: 'pan-y' }}
           onTouchStart={e => {
             touchStartX.current = e.touches[0].clientX
             touchStartY.current = e.touches[0].clientY

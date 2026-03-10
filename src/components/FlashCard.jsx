@@ -149,7 +149,7 @@ export default function FlashCard({ species, flipped, onFlip }) {
   }
 
   return (
-    <div className="card-scene w-full max-w-md" style={{ height: '480px' }}>
+    <div className="card-scene w-full max-w-md" style={{ height: 'min(480px, calc(100dvh - 320px))' }}>
       <div className={`card-inner ${flipped ? 'flipped' : ''}`} onClick={onFlip}>
 
         {/* ── FRONT — Photo ───────────────────────────────────────────── */}
