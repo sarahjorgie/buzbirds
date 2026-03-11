@@ -1,80 +1,75 @@
-// Simplified SA province map using approximate SVG paths
-// Based on decimal degree coordinates mapped to a 500×420 viewBox:
-//   x = (lon - 16.0) / 17.5 * 500   (lon range 16–33.5E)
-//   y = (lat - 21.5) / 14.0 * 420   (lat range 21.5–35.5S)
+// SA province map — SVG paths based on geographic coordinates
+// Projection: x = (lon - 16.0) / 17.5 * 500,  y = (|lat| - 21.5) / 14.0 * 420
+// Viewbox 500×420
 
 const PROVINCES = [
   {
     key: 'limpopo',
     name: 'Limpopo',
     abbr: 'LP',
-    // North strip: borders Zimbabwe/Bots/Mozambique
-    path: 'M271,15 L486,15 L486,148 L429,148 L386,118 L314,104 L271,89 Z',
-    labelX: 370, labelY: 65,
+    // Northern strip: Botswana/Zimbabwe/Mozambique borders, ~22–26S, ~27–33E
+    path: 'M286,105 L314,30 L486,15 L486,135 L429,135 L371,120 Z',
+    labelX: 410, labelY: 72,
   },
   {
     key: 'mpumalanga',
     name: 'Mpumalanga',
     abbr: 'MP',
-    // East of Gauteng, south of Limpopo
-    path: 'M386,118 L486,118 L486,178 L429,178 L386,148 Z',
-    labelX: 448, labelY: 148,
+    path: 'M371,120 L429,135 L486,135 L486,195 L429,195 L400,165 L371,165 Z',
+    labelX: 450, labelY: 158,
   },
   {
     key: 'gauteng',
     name: 'Gauteng',
     abbr: 'GP',
-    // Tiny province, center-northeast
-    path: 'M314,104 L386,104 L386,148 L314,148 Z',
-    labelX: 350, labelY: 126,
+    path: 'M286,105 L371,120 L371,165 L286,165 Z',
+    labelX: 326, labelY: 140,
   },
   {
     key: 'northwest',
     name: 'North West',
     abbr: 'NW',
-    // Left of Gauteng, south of Limpopo
-    path: 'M171,74 L314,74 L314,104 L314,148 L257,163 L200,163 L171,140 Z',
-    labelX: 240, labelY: 115,
+    // Diagonal Botswana border in the north
+    path: 'M114,150 L314,30 L286,105 L286,165 L171,165 L171,105 Z',
+    labelX: 218, labelY: 132,
   },
   {
     key: 'freestate',
     name: 'Free State',
     abbr: 'FS',
-    // Central province
-    path: 'M171,163 L314,148 L386,148 L386,222 L371,252 L257,252 L171,237 Z',
-    labelX: 278, labelY: 200,
+    path: 'M171,165 L286,165 L371,165 L400,165 L371,285 L229,285 L171,255 Z',
+    labelX: 288, labelY: 222,
   },
   {
     key: 'kwazulunatal',
     name: 'KwaZulu-Natal',
     abbr: 'KZN',
-    // East coast, long strip south
-    path: 'M386,148 L486,148 L486,326 L429,340 L371,296 L371,252 L386,222 Z',
-    labelX: 448, labelY: 240,
+    // East coast strip from ~27S down to ~31S
+    path: 'M400,165 L429,195 L486,195 L486,330 L457,360 L400,405 L371,285 Z',
+    labelX: 458, labelY: 268,
   },
   {
     key: 'northerncape',
     name: 'Northern Cape',
     abbr: 'NC',
-    // Huge western province
-    path: 'M0,133 L171,133 L171,163 L171,237 L144,296 L86,340 L0,326 Z',
-    labelX: 75, labelY: 225,
+    // Huge western province — Namibia/Botswana borders in NW, EC/WC/FS in east/south
+    path: 'M14,225 L114,150 L171,105 L171,255 L229,285 L171,345 L114,390 L57,390 L29,360 L14,315 Z',
+    labelX: 90, labelY: 248,
   },
   {
     key: 'easterncape',
     name: 'Eastern Cape',
     abbr: 'EC',
-    // Southeastern, large
-    path: 'M144,252 L371,252 L429,340 L371,400 L200,415 L86,400 L86,340 L144,296 Z',
-    labelX: 255, labelY: 330,
+    path: 'M229,285 L371,285 L400,405 L257,420 L114,405 L114,390 L171,345 Z',
+    labelX: 272, labelY: 358,
   },
   {
     key: 'westerncape',
     name: 'Western Cape',
     abbr: 'WC',
-    // Southwest corner
-    path: 'M0,296 L144,296 L86,340 L86,400 L29,400 L0,370 Z',
-    labelX: 58, labelY: 355,
+    // SW corner — shares NC border from 171,255 to 171,345 and coast
+    path: 'M14,315 L171,255 L171,345 L114,390 L57,390 L29,360 Z',
+    labelX: 80, labelY: 348,
   },
 ]
 
@@ -86,7 +81,6 @@ export default function SAMap({ selectedKey, onSelect }) {
         className="w-full h-auto drop-shadow-lg"
         style={{ maxHeight: '280px' }}
       >
-        {/* Ocean background */}
         <rect width="500" height="420" fill="#0c2340" rx="8" />
 
         {PROVINCES.map(prov => {
@@ -108,21 +102,19 @@ export default function SAMap({ selectedKey, onSelect }) {
                 opacity={dimmed ? 0.5 : 1}
                 style={{ transition: 'fill 0.2s, opacity 0.2s' }}
               />
-              {/* Hover highlight overlay */}
               <path
                 d={prov.path}
                 fill="white"
                 opacity="0"
                 className="hover:opacity-10 transition-opacity"
               />
-              {/* Province label */}
               <text
                 x={prov.labelX}
                 y={prov.labelY}
                 textAnchor="middle"
                 dominantBaseline="middle"
                 fill={isSelected ? 'white' : dimmed ? '#4b7a5a' : '#86efac'}
-                fontSize={prov.key === 'gauteng' || prov.key === 'mpumalanga' ? '11' : '13'}
+                fontSize={prov.key === 'gauteng' ? '10' : prov.key === 'mpumalanga' ? '11' : '13'}
                 fontWeight={isSelected ? '700' : '500'}
                 style={{ pointerEvents: 'none', transition: 'fill 0.2s' }}
               >
@@ -132,11 +124,9 @@ export default function SAMap({ selectedKey, onSelect }) {
           )
         })}
 
-        {/* Compass indicator */}
         <text x="16" y="20" fill="#4b7a5a" fontSize="11" fontFamily="sans-serif">N↑</text>
       </svg>
 
-      {/* Selected province label */}
       <p className="text-center text-green-300 text-sm mt-2 font-medium">
         {selectedKey === 'all' || !selectedKey
           ? 'Tap a province to filter'
