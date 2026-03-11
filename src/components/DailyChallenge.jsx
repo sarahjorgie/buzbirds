@@ -287,7 +287,7 @@ export default function DailyChallenge({ species, onClose, addToCollection }) {
             <div className="p-3 grid grid-cols-2 gap-2 shrink-0">
               {current.choices.map((choice, i) => (
                 <button
-                  key={choice.taxon?.id}
+                  key={`${qIndex}-${choice.taxon?.id}`}
                   onClick={() => handleAnswer(i)}
                   disabled={!!feedback}
                   className={`py-3 px-3 rounded-xl border text-sm font-medium text-left transition-all leading-tight ${choiceStyle(i)}`}

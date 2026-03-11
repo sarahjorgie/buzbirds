@@ -181,7 +181,7 @@ function CallQuestion({ question, feedbackState, onAnswer, onSkip }) {
           }
           return (
             <button
-              key={choice.taxon?.id}
+              key={`${question.correct.taxon?.id}-${choice.taxon?.id}`}
               onClick={() => !feedbackState && sound && onAnswer(i)}
               disabled={!!feedbackState || !sound}
               className={`py-3 px-3 rounded-xl border text-sm font-medium text-left transition-all leading-tight ${style} disabled:opacity-50`}
@@ -479,7 +479,7 @@ export default function QuizMode({ species, deck, progress, onClose, onMarkKnown
               <div className="p-3 grid grid-cols-2 gap-2 shrink-0">
                 {current.choices.map((choice, i) => (
                   <button
-                    key={choice.taxon?.id}
+                    key={`${qIndex}-${choice.taxon?.id}`}
                     onClick={() => handleAnswer(i)}
                     disabled={!!feedbackState}
                     className={`py-3 px-3 rounded-xl border text-sm font-medium text-left transition-all leading-tight ${choiceStyle(i)}`}
@@ -503,7 +503,7 @@ export default function QuizMode({ species, deck, progress, onClose, onMarkKnown
               <div className="flex-1 grid grid-cols-2 gap-2 px-3 pb-4 overflow-hidden">
                 {current.choices.map((choice, i) => (
                   <button
-                    key={choice.taxon?.id}
+                    key={`${qIndex}-${choice.taxon?.id}`}
                     onClick={() => handleAnswer(i)}
                     disabled={!!feedbackState}
                     className={`relative rounded-xl border-2 overflow-hidden transition-all ${
