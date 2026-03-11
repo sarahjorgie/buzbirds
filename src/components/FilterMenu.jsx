@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import SAMap from './SAMap'
 import { BIRD_GROUPS } from '../data/birdGroups'
 import { SA_PROVINCES } from '../data/provinces'
+import { TRIP_DESTINATIONS, TRIP_CATEGORIES } from '../data/tripDestinations'
 
-const TABS = ['Region', 'Groups', 'Progress']
+const TABS = ['Region', 'Trip', 'Groups', 'Progress']
 
 // ── Category icons ────────────────────────────────────────────────────────────
 
@@ -80,8 +81,9 @@ const BIRD_CATEGORIES = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function FilterMenu({ open, onClose, filters, onFilterChange, progress, deck, onClearProgress, groupIds, activeTab, onTabChange }) {
+export default function FilterMenu({ open, onClose, filters, onFilterChange, progress, deck, onClearProgress, groupIds, tripKey, activeTab, onTabChange }) {
   const drawerRef = useRef(null)
+  const [tripSearch, setTripSearch] = useState('')
 
   // Close on outside click
   useEffect(() => {
@@ -148,7 +150,17 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
 
         {/* Active filters summary */}
         <div className="px-5 py-3 bg-white/5 border-b border-white/10 flex flex-wrap gap-2 min-h-[44px] items-center">
-          {activeProvinceKey !== 'all' && (
+          {tripKey && (() => {
+            const trip = TRIP_DESTINATIONS.find(t => t.key === tripKey)
+            return trip ? (
+              <span className="text-xs bg-blue-900 text-blue-300 px-2 py-1 rounded-full flex items-center gap-1">
+                <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
+                {trip.name}
+                <button onClick={() => onFilterChange({ tripKey: null })} className="text-blue-500 hover:text-white leading-none">×</button>
+              </span>
+            ) : null
+          })()}
+          {!tripKey && activeProvinceKey !== 'all' && (
             <span className="text-xs bg-green-900 text-green-300 px-2 py-1 rounded-full flex items-center gap-1">
               {activeProvince.emoji} {activeProvince.name}
               <button onClick={() => onFilterChange({ provinceKey: 'all' })} className="text-green-500 hover:text-white leading-none">×</button>
@@ -213,6 +225,64 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* ── TRIP TAB ──────────────────────────────────────────────── */}
+          {activeTab === 'Trip' && (
+            <div className="p-4">
+              <input
+                type="text"
+                placeholder="Search destinations…"
+                value={tripSearch}
+                onChange={e => setTripSearch(e.target.value)}
+                className="w-full bg-white/10 text-white placeholder-white/30 rounded-xl px-4 py-2.5 text-sm mb-4 outline-none focus:ring-1 focus:ring-green-500"
+              />
+
+              {tripKey && (
+                <button
+                  onClick={() => { onFilterChange({ tripKey: null }); setTripSearch('') }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-white/5 text-white/50 mb-3 text-sm"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear trip filter
+                </button>
+              )}
+
+              {TRIP_CATEGORIES.map(cat => {
+                const destinations = TRIP_DESTINATIONS
+                  .filter(d => d.category === cat.id)
+                  .filter(d => !tripSearch || d.name.toLowerCase().includes(tripSearch.toLowerCase()) || d.province.toLowerCase().includes(tripSearch.toLowerCase()))
+                if (destinations.length === 0) return null
+                return (
+                  <div key={cat.id} className="mb-4">
+                    <p className="text-xs font-semibold text-white/40 uppercase tracking-wider px-1 mb-1.5">{cat.label}</p>
+                    <div className="space-y-1">
+                      {destinations.map(dest => {
+                        const isSelected = tripKey === dest.key
+                        return (
+                          <button
+                            key={dest.key}
+                            onClick={() => onFilterChange({ tripKey: isSelected ? null : dest.key })}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${isSelected ? 'bg-blue-900/60 text-blue-200' : 'hover:bg-white/5 text-white/70'}`}
+                          >
+                            <svg className={`w-4 h-4 shrink-0 ${isSelected ? 'text-blue-400' : 'text-white/30'}`} fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{dest.name}</p>
+                              <p className="text-xs text-white/30 truncate">{dest.province} · {dest.description}</p>
+                            </div>
+                            {isSelected && <CheckIcon className="w-4 h-4 shrink-0 text-blue-400" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
 

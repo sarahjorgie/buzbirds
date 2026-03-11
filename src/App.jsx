@@ -9,6 +9,7 @@ import { useProgress } from './hooks/useProgress'
 import WelcomeMessage, { hasSeenWelcome } from './components/WelcomeMessage'
 import { SA_PROVINCES } from './data/provinces'
 import { BIRD_GROUPS } from './data/birdGroups'
+import { TRIP_DESTINATIONS } from './data/tripDestinations'
 import { resolvePlaceId, resolveTaxonId, preloadIds } from './utils/apiLookup'
 import { prefetchTaxonomy } from './utils/gbif'
 
@@ -98,7 +99,7 @@ function EmptyState({ title, message, onClearFilters, onRetry }) {
 export default function App() {
   const [filters, setFilters] = useState({
     placeId: 113055, taxonIds: [3],
-    provinceKey: 'all', groupIds: ['all'],
+    provinceKey: 'all', groupIds: ['all'], tripKey: null,
   })
   const [resolving, setResolving] = useState(false)
   const [resolvingLabel, setResolvingLabel] = useState('')
@@ -240,16 +241,30 @@ export default function App() {
   }, [loadSpecies])
 
   // ── Filter changes — resolve IDs first, then fetch ────────────────────
-  const handleFilterChange = useCallback(async ({ provinceKey, groupIds }) => {
-    if (provinceKey !== undefined) setMenuOpen(false)
+  const handleFilterChange = useCallback(async ({ provinceKey, groupIds, tripKey }) => {
+    if (provinceKey !== undefined || tripKey !== undefined) setMenuOpen(false)
 
     try {
       let placeId        = filters.placeId
       let newProvinceKey = provinceKey ?? filters.provinceKey
       let newGroupIds    = groupIds    ?? filters.groupIds
+      let newTripKey     = tripKey     !== undefined ? tripKey : filters.tripKey
 
-      // Resolve province place_id
-      if (provinceKey !== undefined && provinceKey !== filters.provinceKey) {
+      // Trip and province are mutually exclusive region filters
+      if (tripKey !== undefined) {
+        if (tripKey === null) {
+          placeId = 113055
+          newProvinceKey = 'all'
+        } else {
+          const trip = TRIP_DESTINATIONS.find(t => t.key === tripKey)
+          if (trip) {
+            placeId = trip.placeId
+            newProvinceKey = 'all'
+          }
+        }
+      } else if (provinceKey !== undefined && provinceKey !== filters.provinceKey) {
+        // Switching province clears trip
+        newTripKey = null
         const province = SA_PROVINCES.find(p => p.key === provinceKey)
         if (province) {
           if (province.placeId) {
@@ -283,7 +298,7 @@ export default function App() {
       const taxonIds = resolvedTaxonIds.filter(Boolean)
 
       setResolving(false)
-      setFilters({ placeId, taxonIds, provinceKey: newProvinceKey, groupIds: newGroupIds })
+      setFilters({ placeId, taxonIds, provinceKey: newProvinceKey, groupIds: newGroupIds, tripKey: newTripKey })
       loadSpecies(placeId, taxonIds)
 
     } catch (err) {
@@ -359,7 +374,7 @@ export default function App() {
   }
 
   const clearFilters = () => {
-    handleFilterChange({ provinceKey: 'all', groupIds: ['all'] })
+    handleFilterChange({ provinceKey: 'all', groupIds: ['all'], tripKey: null })
   }
 
   // ── Render ────────────────────────────────────────────────────────────
@@ -367,9 +382,10 @@ export default function App() {
 
   if (loadingFirst) {
     const province   = SA_PROVINCES.find(p => p.key === filters.provinceKey)
+    const trip       = filters.tripKey ? TRIP_DESTINATIONS.find(t => t.key === filters.tripKey) : null
     const groupNames = filters.groupIds.filter(id => id !== 'all').map(id => BIRD_GROUPS.find(g => g.id === id)?.name).filter(Boolean)
     const parts = [
-      province?.key !== 'all' ? province.name : 'All of South Africa',
+      trip ? trip.name : (province?.key !== 'all' ? province.name : 'All of South Africa'),
       groupNames.length > 0 ? groupNames.join(' + ') : null,
     ].filter(Boolean)
     return (
@@ -419,6 +435,7 @@ export default function App() {
   const knownCount = deck.filter(s => progress[s.taxon?.id] === 'known').length
 
   const activeProvince  = SA_PROVINCES.find(p => p.key === filters.provinceKey)
+  const activeTrip      = filters.tripKey ? TRIP_DESTINATIONS.find(t => t.key === filters.tripKey) : null
   const activeGroups    = filters.groupIds.filter(id => id !== 'all').map(id => BIRD_GROUPS.find(g => g.id === id)).filter(Boolean)
   const filtersActive   = filters.placeId !== 113055 || activeGroups.length > 0
 
@@ -467,6 +484,7 @@ export default function App() {
         deck={deck}
         onClearProgress={clearProgress}
         groupIds={filters.groupIds}
+        tripKey={filters.tripKey}
         activeTab={menuTab}
         onTabChange={setMenuTab}
       />
@@ -495,7 +513,14 @@ export default function App() {
                   {species.length.toLocaleString()} species
                   {loadingMore && <span className="text-green-600 ml-1">· loading…</span>}
                 </span>
-                {activeProvince?.key !== 'all' && (
+                {activeTrip && (
+                  <span className="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <svg className="w-3 h-3 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/></svg>
+                    {activeTrip.name}
+                    <button onClick={() => handleFilterChange({ tripKey: null })} className="text-blue-500 hover:text-white">×</button>
+                  </span>
+                )}
+                {!activeTrip && activeProvince?.key !== 'all' && (
                   <span className="text-xs bg-green-900 text-green-300 px-2 py-0.5 rounded-full flex items-center gap-1">
                     {activeProvince.emoji} {activeProvince.name}
                     <button onClick={() => handleFilterChange({ provinceKey: 'all' })} className="text-green-500 hover:text-white">×</button>
