@@ -1,12 +1,86 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import SAMap from './SAMap'
 import { BIRD_GROUPS } from '../data/birdGroups'
 import { SA_PROVINCES } from '../data/provinces'
 
 const TABS = ['Region', 'Groups', 'Progress']
 
-export default function FilterMenu({ open, onClose, filters, onFilterChange, progress, deck, onClearProgress, groupIds }) {
-  const [activeTab, setActiveTab] = useState('Region')
+// ── Category icons ────────────────────────────────────────────────────────────
+
+function WaterBirdIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      {/* Duck swimming — body, head, eye */}
+      <path d="M20 11c0-1.4-1.1-2.5-2.5-2.5-.8 0-1.5.4-2 1L14 10.5H8.5C6.6 10.5 5 12.1 5 14s1.6 3.5 3.5 3.5H11l2 1h4l2.5-2.5c.3-.5.5-1 .5-1.5V11z" />
+      <circle cx="17.5" cy="8.5" r="1.5" />
+    </svg>
+  )
+}
+
+function RaptorIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      {/* Eagle from above — spread wings + tail */}
+      <path d="M12 6 L1 11 L4.5 10 L3 14 L7.5 12 L9 16 L12 13 L15 16 L16.5 12 L21 14 L19.5 10 L23 11 Z" />
+      <path d="M11.5 13 L12.5 13 L12 18 Z" />
+    </svg>
+  )
+}
+
+function GroundBirdIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      {/* Round-bodied ground bird with head */}
+      <circle cx="15" cy="7" r="2.5" />
+      <path d="M12.5 9C10.5 9 9 10.2 8 12L5 12L3 15H8L9 13H11L10 17H13L14 15L15 17H18L16.5 12.5C17.8 11.8 19 10.5 19 9C17 8.5 14.5 8.5 12.5 9Z" />
+    </svg>
+  )
+}
+
+function PasserineIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      {/* Perching bird on a branch */}
+      <circle cx="14" cy="7" r="2.5" />
+      <path d="M11.5 9C9.5 9 8 10.5 8 12.5L5 13.5V15.5L9 14L11 15H14L16 14L16 12C17.5 11.5 18 10 18 9C16 8.2 13.5 8.2 11.5 9Z" />
+      <path d="M4 17H20V18.5H4Z" />
+      <path d="M9 15V17M13 15V17" strokeWidth="1" />
+    </svg>
+  )
+}
+
+function AllBirdsIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      {/* Flock — multiple flying bird silhouettes */}
+      <path d="M12 6C10.5 4 8.5 4 7.5 6C9 6 10.5 7 12 6Z" />
+      <path d="M17.5 4C16.5 2.5 14.5 2.5 13.5 4C15 4 16.5 5 17.5 4Z" />
+      <path d="M7 10C6 8.5 4 8.5 3 10C4.5 10 6 11 7 10Z" />
+      <path d="M21.5 9C20.5 7.5 18.5 7.5 17.5 9C19 9 20.5 10 21.5 9Z" />
+      <path d="M15 14C14 12.5 12 12.5 11 14C12.5 14 14 15 15 14Z" />
+      <path d="M9 16C8 14.5 6 14.5 5 16C6.5 16 8 17 9 16Z" />
+    </svg>
+  )
+}
+
+function CheckIcon({ className }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 20 20">
+      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+const BIRD_CATEGORIES = [
+  { id: 'waterbirds',  label: 'Waterbirds & Seabirds',  Icon: WaterBirdIcon },
+  { id: 'raptors',     label: 'Raptors',                 Icon: RaptorIcon },
+  { id: 'terrestrial', label: 'Non-Passerines',          Icon: GroundBirdIcon },
+  { id: 'passerines',  label: 'Passerines',              Icon: PasserineIcon },
+]
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export default function FilterMenu({ open, onClose, filters, onFilterChange, progress, deck, onClearProgress, groupIds, activeTab, onTabChange }) {
   const drawerRef = useRef(null)
 
   // Close on outside click
@@ -29,7 +103,6 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
   const known    = deck.filter(s => progress[s.taxon?.id] === 'known').length
   const unmarked = deck.length - known
 
-  // Use provinceKey / groupId from filters (display keys, not IDs)
   const activeProvinceKey = filters.provinceKey || 'all'
   const activeGroupIds    = groupIds || ['all']
   const activeProvince    = SA_PROVINCES.find(p => p.key === activeProvinceKey) || SA_PROVINCES[0]
@@ -100,7 +173,7 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
           {TABS.map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => onTabChange(tab)}
               className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === tab ? 'text-green-400 border-b-2 border-green-400' : 'text-white/50 hover:text-white/70'}`}
             >
               {tab}
@@ -135,11 +208,7 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
                           <p className="text-xs text-white/30 truncate">{prov.description}</p>
                         )}
                       </div>
-                      {isSelected && (
-                        <svg className="w-4 h-4 shrink-0 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
+                      {isSelected && <CheckIcon className="w-4 h-4 shrink-0 text-green-400" />}
                     </button>
                   )
                 })}
@@ -149,30 +218,58 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
 
           {/* ── GROUPS TAB ────────────────────────────────────────────── */}
           {activeTab === 'Groups' && (
-            <div className="p-4 space-y-1">
+            <div className="p-4">
               <p className="text-xs text-white/30 mb-3 px-1">
                 Tap to select. Select multiple to combine groups.
               </p>
-              {BIRD_GROUPS.map(group => {
-                const isSelected = group.id === 'all'
-                  ? activeGroupIds.every(id => id === 'all')
-                  : activeGroupIds.includes(group.id)
+
+              {/* All Birds */}
+              {(() => {
+                const isSelected = activeGroupIds.every(id => id === 'all')
                 return (
                   <button
-                    key={group.id}
-                    onClick={() => toggleGroup(group.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${isSelected ? 'bg-green-900/60 text-green-300' : 'hover:bg-white/5 text-white/70'}`}
+                    onClick={() => toggleGroup('all')}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors mb-4 ${isSelected ? 'bg-green-900/60 text-green-300' : 'hover:bg-white/5 text-white/70'}`}
                   >
+                    <AllBirdsIcon className="w-5 h-5 shrink-0 opacity-80" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{group.name}</p>
-                      <p className="text-xs text-white/30 truncate">{group.description}</p>
+                      <p className="text-sm font-medium">All Birds</p>
+                      <p className="text-xs text-white/30">All species</p>
                     </div>
-                    {isSelected && (
-                      <svg className="w-4 h-4 shrink-0 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
+                    {isSelected && <CheckIcon className="w-4 h-4 shrink-0 text-green-400" />}
                   </button>
+                )
+              })()}
+
+              {/* Category sections */}
+              {BIRD_CATEGORIES.map(({ id: catId, label, Icon }) => {
+                const groups = BIRD_GROUPS.filter(g => g.category === catId)
+                return (
+                  <div key={catId} className="mb-4">
+                    <div className="flex items-center gap-2 px-1 mb-1.5">
+                      <Icon className="w-4 h-4 text-white/40" />
+                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">{label}</p>
+                    </div>
+                    <div className="space-y-1">
+                      {groups.map(group => {
+                        const isSelected = activeGroupIds.includes(group.id)
+                        return (
+                          <button
+                            key={group.id}
+                            onClick={() => toggleGroup(group.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${isSelected ? 'bg-green-900/60 text-green-300' : 'hover:bg-white/5 text-white/70'}`}
+                          >
+                            <Icon className="w-4 h-4 shrink-0 opacity-60" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{group.name}</p>
+                              <p className="text-xs text-white/30 truncate">{group.description}</p>
+                            </div>
+                            {isSelected && <CheckIcon className="w-4 h-4 shrink-0 text-green-400" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
             </div>

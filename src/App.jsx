@@ -117,6 +117,7 @@ export default function App() {
   const [flipped, setFlipped]     = useState(false)
   const [shuffled, setShuffled]   = useState(false)
   const [menuOpen, setMenuOpen]         = useState(false)
+  const [menuTab, setMenuTab]           = useState('Region')
   const [hideKnown, setHideKnown]       = useState(true)
   const [quizOpen, setQuizOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
@@ -240,7 +241,7 @@ export default function App() {
 
   // ── Filter changes — resolve IDs first, then fetch ────────────────────
   const handleFilterChange = useCallback(async ({ provinceKey, groupIds }) => {
-    setMenuOpen(false)
+    if (provinceKey !== undefined) setMenuOpen(false)
 
     try {
       let placeId        = filters.placeId
@@ -466,6 +467,8 @@ export default function App() {
         deck={deck}
         onClearProgress={clearProgress}
         groupIds={filters.groupIds}
+        activeTab={menuTab}
+        onTabChange={setMenuTab}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col items-center px-4 py-5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
