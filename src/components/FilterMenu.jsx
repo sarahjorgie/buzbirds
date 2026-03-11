@@ -4,7 +4,7 @@ import { BIRD_GROUPS } from '../data/birdGroups'
 import { SA_PROVINCES } from '../data/provinces'
 import { TRIP_DESTINATIONS, TRIP_CATEGORIES } from '../data/tripDestinations'
 
-const TABS = ['Region', 'Trip', 'Groups', 'Progress']
+const TABS = ['Region', 'Groups', 'Trip', 'Progress']
 
 // ── Category icons ────────────────────────────────────────────────────────────
 
