@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { fetchBirdCall } from '../utils/xencanto'
+import { pickDistractors } from '../utils/distractors'
 
 function shuffleArray(arr) {
   const a = [...arr]
@@ -21,10 +22,7 @@ function buildQuestions(config, deck, species, progress) {
   const targets = shuffleArray(pool).slice(0, config.questionCount)
 
   return targets.map(correct => {
-    const distractorPool = species.filter(
-      s => s.taxon?.id !== correct.taxon?.id && s.taxon?.default_photo
-    )
-    const distractors = shuffleArray(distractorPool).slice(0, 3)
+    const distractors = pickDistractors(correct, species, 3, shuffleArray)
     const choices = shuffleArray([correct, ...distractors])
     return { correct, choices, correctIndex: choices.findIndex(c => c.taxon?.id === correct.taxon?.id) }
   })

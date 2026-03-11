@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { pickDistractors } from '../utils/distractors'
 
 const STORAGE_KEY = 'buzbirds-daily-v1'
 
@@ -47,9 +48,9 @@ function getDailyBirds(species, dateStr) {
 }
 
 function shuffleChoices(correct, allSpecies) {
-  const distractorPool = allSpecies.filter(s => s.taxon?.id !== correct.taxon?.id && s.taxon?.default_photo)
-  const distractors = seededShuffle(distractorPool, correct.taxon?.id).slice(0, 3)
-  const choices = [...distractors, correct].sort(() => Math.random() - 0.5)
+  const seed = correct.taxon?.id
+  const distractors = pickDistractors(correct, allSpecies, 3, arr => seededShuffle(arr, seed))
+  const choices = seededShuffle([...distractors, correct], seed + 1)
   return { choices, correctIndex: choices.findIndex(c => c.taxon?.id === correct.taxon?.id) }
 }
 
