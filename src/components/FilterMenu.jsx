@@ -5,7 +5,7 @@ import { SA_PROVINCES } from '../data/provinces'
 
 const TABS = ['Region', 'Groups', 'Progress']
 
-export default function FilterMenu({ open, onClose, filters, onFilterChange, progress, deck, onClearProgress }) {
+export default function FilterMenu({ open, onClose, filters, onFilterChange, progress, deck, onClearProgress, groupIds }) {
   const [activeTab, setActiveTab] = useState('Region')
   const drawerRef = useRef(null)
 
@@ -31,9 +31,20 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
 
   // Use provinceKey / groupId from filters (display keys, not IDs)
   const activeProvinceKey = filters.provinceKey || 'all'
-  const activeGroupId     = filters.groupId || 'all'
+  const activeGroupIds    = groupIds || ['all']
   const activeProvince    = SA_PROVINCES.find(p => p.key === activeProvinceKey) || SA_PROVINCES[0]
-  const activeGroup       = BIRD_GROUPS.find(g => g.id === activeGroupId) || BIRD_GROUPS[0]
+
+  const toggleGroup = (id) => {
+    if (id === 'all') {
+      onFilterChange({ groupIds: ['all'] })
+      return
+    }
+    const current = activeGroupIds.filter(g => g !== 'all')
+    const next = current.includes(id)
+      ? current.filter(g => g !== id)
+      : [...current, id]
+    onFilterChange({ groupIds: next.length === 0 ? ['all'] : next })
+  }
 
   return (
     <>
@@ -70,13 +81,16 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
               <button onClick={() => onFilterChange({ provinceKey: 'all' })} className="text-green-500 hover:text-white leading-none">×</button>
             </span>
           )}
-          {activeGroupId !== 'all' && (
-            <span className="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded-full flex items-center gap-1">
-              {activeGroup.icon} {activeGroup.name}
-              <button onClick={() => onFilterChange({ groupId: 'all' })} className="text-emerald-500 hover:text-white leading-none">×</button>
-            </span>
-          )}
-          {activeProvinceKey === 'all' && activeGroupId === 'all' && (
+          {activeGroupIds.filter(id => id !== 'all').map(id => {
+            const g = BIRD_GROUPS.find(x => x.id === id)
+            return g ? (
+              <span key={id} className="text-xs bg-emerald-900 text-emerald-300 px-2 py-1 rounded-full flex items-center gap-1">
+                {g.name}
+                <button onClick={() => toggleGroup(id)} className="text-emerald-500 hover:text-white leading-none">×</button>
+              </span>
+            ) : null
+          })}
+          {activeProvinceKey === 'all' && activeGroupIds.every(id => id === 'all') && (
             <span className="text-xs text-white/30">No filters active</span>
           )}
         </div>
@@ -137,17 +151,18 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
           {activeTab === 'Groups' && (
             <div className="p-4 space-y-1">
               <p className="text-xs text-white/30 mb-3 px-1">
-                Re-fetches from iNaturalist for the selected bird order or family.
+                Tap to select. Select multiple to combine groups.
               </p>
               {BIRD_GROUPS.map(group => {
-                const isSelected = activeGroupId === group.id
+                const isSelected = group.id === 'all'
+                  ? activeGroupIds.every(id => id === 'all')
+                  : activeGroupIds.includes(group.id)
                 return (
                   <button
                     key={group.id}
-                    onClick={() => onFilterChange({ groupId: group.id })}
+                    onClick={() => toggleGroup(group.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${isSelected ? 'bg-green-900/60 text-green-300' : 'hover:bg-white/5 text-white/70'}`}
                   >
-                    <span className="text-xl w-8 text-center shrink-0">{group.icon}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{group.name}</p>
                       <p className="text-xs text-white/30 truncate">{group.description}</p>

@@ -97,8 +97,8 @@ function EmptyState({ title, message, onClearFilters, onRetry }) {
 // ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
   const [filters, setFilters] = useState({
-    placeId: 113055, taxonId: 3,
-    provinceKey: 'all', groupId: 'all',
+    placeId: 113055, taxonIds: [3],
+    provinceKey: 'all', groupIds: ['all'],
   })
   const [resolving, setResolving] = useState(false)
   const [resolvingLabel, setResolvingLabel] = useState('')
@@ -158,7 +158,7 @@ export default function App() {
   }, [])
 
   // ── Fetch species pages ───────────────────────────────────────────────
-  const loadSpecies = useCallback(async (placeId, taxonId) => {
+  const loadSpecies = useCallback(async (placeId, taxonIds) => {
     if (abortRef.current) abortRef.current.aborted = true
     const abort = { aborted: false }
     abortRef.current = abort
@@ -169,45 +169,60 @@ export default function App() {
     setFlipped(false)
     setShuffled(false)
     setCurrentPage(1)
-    // Clear data immediately
     setSpecies([])
     setDeck([])
 
     try {
-      const first = await fetchPage(placeId, taxonId, 1)
-      if (abort.aborted) return
+      if (taxonIds.length === 1) {
+        // ── Single group: paginate fully ────────────────────────────────
+        const taxonId = taxonIds[0]
+        const first = await fetchPage(placeId, taxonId, 1)
+        if (abort.aborted) return
 
-      setTotalAvailable(first.total_results)
+        setTotalAvailable(first.total_results)
+        const withPhotos = first.results.filter(s => s.taxon?.default_photo)
+        setSpecies(withPhotos)
+        setDeck(withPhotos)
+        setLoadingFirst(false)
+        prefetchTaxonomy(withPhotos.slice(0, 50).map(s => s.taxon?.name).filter(Boolean))
 
-      const withPhotos = first.results.filter(s => s.taxon?.default_photo)
-      // Set both from the same array reference for first page
-      setSpecies(withPhotos)
-      setDeck(withPhotos)
-      setLoadingFirst(false)
-      // Prefetch GBIF taxonomy for first 50 cards in background
-      prefetchTaxonomy(withPhotos.slice(0, 50).map(s => s.taxon?.name).filter(Boolean))
-
-      const maxPages = Math.min(MAX_PAGES, Math.ceil(first.total_results / PER_PAGE))
-      if (maxPages > 1) {
-        setLoadingMore(true)
-        // Accumulate all remaining pages, then batch-update state once per page
-        for (let page = 2; page <= maxPages; page++) {
-          if (abort.aborted) return
-          await new Promise(r => setTimeout(r, 350))
-          if (abort.aborted) return
-          setCurrentPage(page)
-
-          const data = await fetchPage(placeId, taxonId, page)
-          if (abort.aborted) return
-
-          const filtered = data.results.filter(s => s.taxon?.default_photo)
-          if (filtered.length > 0) {
-            // Use a single state updater to append to both arrays atomically
-            setSpecies(prev => [...prev, ...filtered])
-            setDeck(prev => [...prev, ...filtered])
+        const maxPages = Math.min(MAX_PAGES, Math.ceil(first.total_results / PER_PAGE))
+        if (maxPages > 1) {
+          setLoadingMore(true)
+          for (let page = 2; page <= maxPages; page++) {
+            if (abort.aborted) return
+            await new Promise(r => setTimeout(r, 350))
+            if (abort.aborted) return
+            setCurrentPage(page)
+            const data = await fetchPage(placeId, taxonId, page)
+            if (abort.aborted) return
+            const filtered = data.results.filter(s => s.taxon?.default_photo)
+            if (filtered.length > 0) {
+              setSpecies(prev => [...prev, ...filtered])
+              setDeck(prev => [...prev, ...filtered])
+            }
           }
+          setLoadingMore(false)
         }
-        setLoadingMore(false)
+      } else {
+        // ── Multiple groups: fetch first 2 pages each in parallel, merge ─
+        const pages = await Promise.all(
+          taxonIds.flatMap(id => [
+            fetchPage(placeId, id, 1),
+            fetchPage(placeId, id, 2),
+          ])
+        )
+        if (abort.aborted) return
+        const seen = new Set()
+        const merged = pages
+          .flatMap(d => d.results.filter(s => s.taxon?.default_photo))
+          .filter(s => { if (seen.has(s.taxon.id)) return false; seen.add(s.taxon.id); return true })
+          .sort((a, b) => b.count - a.count)
+        setTotalAvailable(merged.length)
+        setSpecies(merged)
+        setDeck(merged)
+        setLoadingFirst(false)
+        prefetchTaxonomy(merged.slice(0, 50).map(s => s.taxon?.name).filter(Boolean))
       }
     } catch (err) {
       if (!abort.aborted) {
@@ -220,53 +235,55 @@ export default function App() {
 
   // ── Initial load ──────────────────────────────────────────────────────
   useEffect(() => {
-    loadSpecies(113055, 3)
+    loadSpecies(113055, [3])
   }, [loadSpecies])
 
   // ── Filter changes — resolve IDs first, then fetch ────────────────────
-  const handleFilterChange = useCallback(async ({ provinceKey, groupId }) => {
+  const handleFilterChange = useCallback(async ({ provinceKey, groupIds }) => {
     setMenuOpen(false)
 
     try {
-      let placeId = filters.placeId
-      let taxonId = filters.taxonId
+      let placeId        = filters.placeId
       let newProvinceKey = provinceKey ?? filters.provinceKey
-      let newGroupId     = groupId     ?? filters.groupId
+      let newGroupIds    = groupIds    ?? filters.groupIds
 
       // Resolve province place_id
       if (provinceKey !== undefined && provinceKey !== filters.provinceKey) {
         const province = SA_PROVINCES.find(p => p.key === provinceKey)
         if (province) {
           if (province.placeId) {
-            // Already resolved (either hardcoded or preloaded)
             placeId = province.placeId
           } else if (province.searchQuery) {
             setResolving(true)
             setResolvingLabel(`Finding ${province.name} on iNaturalist…`)
             placeId = await resolvePlaceId(province.searchQuery)
-            province.placeId = placeId // cache
+            province.placeId = placeId
           }
         }
       }
 
-      // Resolve group taxon_id
-      if (groupId !== undefined && groupId !== filters.groupId) {
-        const group = BIRD_GROUPS.find(g => g.id === groupId)
-        if (group) {
-          if (group.taxonId) {
-            taxonId = group.taxonId
-          } else if (group.searchQuery) {
+      // Resolve taxon IDs for all selected groups
+      const resolvedTaxonIds = await Promise.all(
+        newGroupIds.map(async (gid) => {
+          if (gid === 'all') return 3
+          const group = BIRD_GROUPS.find(g => g.id === gid)
+          if (!group) return null
+          if (group.taxonId) return group.taxonId
+          if (group.searchQuery) {
             setResolving(true)
             setResolvingLabel(`Finding ${group.name} taxonomy…`)
-            taxonId = await resolveTaxonId(group.searchQuery)
-            group.taxonId = taxonId // cache
+            const id = await resolveTaxonId(group.searchQuery)
+            group.taxonId = id
+            return id
           }
-        }
-      }
+          return null
+        })
+      )
+      const taxonIds = resolvedTaxonIds.filter(Boolean)
 
       setResolving(false)
-      setFilters({ placeId, taxonId, provinceKey: newProvinceKey, groupId: newGroupId })
-      loadSpecies(placeId, taxonId)
+      setFilters({ placeId, taxonIds, provinceKey: newProvinceKey, groupIds: newGroupIds })
+      loadSpecies(placeId, taxonIds)
 
     } catch (err) {
       setResolving(false)
@@ -341,18 +358,18 @@ export default function App() {
   }
 
   const clearFilters = () => {
-    handleFilterChange({ provinceKey: 'all', groupId: 'all' })
+    handleFilterChange({ provinceKey: 'all', groupIds: ['all'] })
   }
 
   // ── Render ────────────────────────────────────────────────────────────
   if (resolving) return <ResolvingScreen label={resolvingLabel} />
 
   if (loadingFirst) {
-    const province = SA_PROVINCES.find(p => p.key === filters.provinceKey)
-    const group    = BIRD_GROUPS.find(g => g.id === filters.groupId)
+    const province   = SA_PROVINCES.find(p => p.key === filters.provinceKey)
+    const groupNames = filters.groupIds.filter(id => id !== 'all').map(id => BIRD_GROUPS.find(g => g.id === id)?.name).filter(Boolean)
     const parts = [
       province?.key !== 'all' ? province.name : 'All of South Africa',
-      group?.id !== 'all' ? group.name : null,
+      groupNames.length > 0 ? groupNames.join(' + ') : null,
     ].filter(Boolean)
     return (
       <LoadingScreen
@@ -369,8 +386,8 @@ export default function App() {
       <EmptyState
         title="Something went wrong"
         message={error}
-        onClearFilters={filters.placeId !== 113055 || filters.taxonId !== 3 ? clearFilters : null}
-        onRetry={() => loadSpecies(filters.placeId, filters.taxonId)}
+        onClearFilters={filters.placeId !== 113055 || !filters.taxonIds.every(id => id === 3) ? clearFilters : null}
+        onRetry={() => loadSpecies(filters.placeId, filters.taxonIds)}
       />
     )
   }
@@ -400,9 +417,9 @@ export default function App() {
   const cardStatus = progress[current?.taxon?.id]
   const knownCount = deck.filter(s => progress[s.taxon?.id] === 'known').length
 
-  const activeProvince = SA_PROVINCES.find(p => p.key === filters.provinceKey)
-  const activeGroup    = BIRD_GROUPS.find(g => g.id    === filters.groupId)
-  const filtersActive  = filters.placeId !== 113055 || filters.taxonId !== 3
+  const activeProvince  = SA_PROVINCES.find(p => p.key === filters.provinceKey)
+  const activeGroups    = filters.groupIds.filter(id => id !== 'all').map(id => BIRD_GROUPS.find(g => g.id === id)).filter(Boolean)
+  const filtersActive   = filters.placeId !== 113055 || activeGroups.length > 0
 
   // Keep ref in sync so swipeNavigate setTimeout doesn't stale-close over deck length
   deckLengthRef.current = visibleDeck.length
@@ -448,6 +465,7 @@ export default function App() {
         progress={progress}
         deck={deck}
         onClearProgress={clearProgress}
+        groupIds={filters.groupIds}
       />
 
       <div className="min-h-screen bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col items-center px-4 py-5" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.25rem)' }}>
@@ -480,12 +498,12 @@ export default function App() {
                     <button onClick={() => handleFilterChange({ provinceKey: 'all' })} className="text-green-500 hover:text-white">×</button>
                   </span>
                 )}
-                {activeGroup?.id !== 'all' && (
-                  <span className="text-xs bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    {activeGroup.icon} {activeGroup.name}
-                    <button onClick={() => handleFilterChange({ groupId: 'all' })} className="text-emerald-500 hover:text-white">×</button>
+                {activeGroups.map(group => (
+                  <span key={group.id} className="text-xs bg-emerald-900 text-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    {group.name}
+                    <button onClick={() => handleFilterChange({ groupIds: filters.groupIds.filter(id => id !== group.id) || ['all'] })} className="text-emerald-500 hover:text-white">×</button>
                   </span>
-                )}
+                ))}
                 {hideKnown && (
                   <span className="text-xs bg-white/10 text-white/50 px-2 py-0.5 rounded-full">
                     hiding {knownCount} known
