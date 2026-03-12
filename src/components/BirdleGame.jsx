@@ -253,9 +253,10 @@ function SelectorBtn({ catKey, value, onOpen }) {
 
 // ── Result row (past rounds) ──────────────────────────────────────────────────
 function RoundRow({ round, birdPool }) {
-  const bird  = birdPool.find(s => s.taxon?.id === round.answers.birdId)
-  const name  = bird?.taxon?.preferred_common_name || bird?.taxon?.name || '?'
-  const photo = bird?.taxon?.default_photo?.square_url
+  // Use name/photo stored at guess time; fall back to birdPool lookup for old rounds
+  const bird  = round.birdName ? null : birdPool.find(s => s.taxon?.id === round.answers.birdId)
+  const name  = round.birdName || bird?.taxon?.preferred_common_name || bird?.taxon?.name || '?'
+  const photo = round.birdPhoto || bird?.taxon?.default_photo?.square_url
 
   return (
     <div className="flex gap-1 px-3">
@@ -348,6 +349,7 @@ export default function BirdleGame({ species, onClose }) {
 
   const makeGuess = () => {
     if (!allFilled || gameState !== 'playing' || !mysteryTraits) return
+    const guessedBird = birdPool.find(s => s.taxon?.id === current.birdId)
     const results = {
       size:    current.size    === mysteryTraits.size,
       food:    current.food    === mysteryTraits.food,
@@ -355,7 +357,12 @@ export default function BirdleGame({ species, onClose }) {
       habitat: current.habitat === mysteryTraits.habitat,
       bird:    current.birdId  === mystery?.taxon?.id,
     }
-    const newRounds = [...rounds, { answers: { ...current }, results }]
+    const newRounds = [...rounds, {
+      answers: { ...current },
+      results,
+      birdName:  guessedBird?.taxon?.preferred_common_name || guessedBird?.taxon?.name || '',
+      birdPhoto: guessedBird?.taxon?.default_photo?.square_url || '',
+    }]
     const won       = Object.values(results).every(Boolean)
     const newState  = won ? 'won' : newRounds.length >= MAX_GUESSES ? 'lost' : 'playing'
 
@@ -404,19 +411,22 @@ export default function BirdleGame({ species, onClose }) {
       </div>
 
       {/* Mystery bird */}
-      <div className="relative shrink-0 h-28 overflow-hidden bg-black/30">
-        {mysteryPhoto && (
-          <img src={mysteryPhoto} alt={revealed ? mysteryName : 'Mystery bird'}
-               className={`w-full h-full object-cover transition-all duration-1000 ${revealed ? '' : 'blur-2xl scale-110'}`} />
-        )}
+      <div className="relative shrink-0 overflow-hidden bg-black/40" style={{ height: 160 }}>
+        {mysteryPhoto
+          ? <img src={mysteryPhoto} alt={revealed ? mysteryName : 'Mystery bird'}
+                 className={`w-full h-full object-cover transition-all duration-1000 ${revealed ? '' : 'blur-xl scale-110'}`} />
+          : <div className="w-full h-full bg-green-950/60" />
+        }
+        {/* Dark vignette so text is readable */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+
         {!revealed && (
-          <div className="absolute inset-0 flex items-center justify-center flex-col gap-1">
-            <span className="text-4xl">🐦</span>
-            <p className="text-white/30 text-xs">Who am I?</p>
+          <div className="absolute bottom-2 left-3">
+            <span className="text-white/40 text-xs font-medium tracking-wide">Who am I?</span>
           </div>
         )}
         {revealed && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end px-3 pb-2">
+          <div className="absolute inset-0 flex items-end px-3 pb-2">
             <div>
               <p className={`font-bold text-base leading-tight ${gameState === 'won' ? 'text-green-400' : 'text-white'}`}>
                 {gameState === 'won' ? `🎉 ${mysteryName}` : `The bird was ${mysteryName}`}
@@ -431,7 +441,7 @@ export default function BirdleGame({ species, onClose }) {
         )}
         {callUrl && (
           <button onClick={handlePlayCall} onTouchStart={e => e.stopPropagation()}
-            className={`absolute top-2 left-2 w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+            className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-colors ${
               playing ? 'bg-green-500' : 'bg-black/50 hover:bg-black/70'
             }`}>
             {playing
