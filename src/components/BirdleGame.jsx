@@ -3,7 +3,7 @@ import { fetchPoolTraits, getTraits } from '../data/birdTraits'
 import { fetchBirdCall } from '../utils/xencanto'
 
 const MAX_GUESSES = 5
-const STORAGE_KEY = 'buzbirds-birdle-v3'
+export const STORAGE_KEY = 'buzbirds-birdle-v3'
 const SEED_OFFSET = 8317
 
 function todayStr()     { return new Date().toISOString().slice(0, 10) }

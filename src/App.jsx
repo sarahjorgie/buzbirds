@@ -5,7 +5,7 @@ import CardProgress from './components/CardProgress'
 import QuizMode from './components/QuizMode'
 import Collection from './components/Collection'
 import CollectionReview from './components/CollectionReview'
-import BirdleGame from './components/BirdleGame'
+import BirdleGame, { STORAGE_KEY as BIRDLE_KEY } from './components/BirdleGame'
 import { useProgress } from './hooks/useProgress'
 import WelcomeMessage, { hasSeenWelcome } from './components/WelcomeMessage'
 import { SA_PROVINCES } from './data/provinces'
@@ -127,7 +127,7 @@ export default function App() {
   const [birdleOpen, setBirdleOpen]     = useState(false)
   const [birdleDone, setBirdleDone]     = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('buzbirds-birdle-v1'))
+      const s = JSON.parse(localStorage.getItem(BIRDLE_KEY))
       return s?.date === new Date().toISOString().slice(0, 10) && s?.gameState !== 'playing'
     } catch { return false }
   })
@@ -495,7 +495,7 @@ export default function App() {
           onClose={() => {
             setBirdleOpen(false)
             try {
-              const s = JSON.parse(localStorage.getItem('buzbirds-birdle-v1'))
+              const s = JSON.parse(localStorage.getItem(BIRDLE_KEY))
               setBirdleDone(s?.date === new Date().toISOString().slice(0, 10) && s?.gameState !== 'playing')
             } catch {}
           }}
