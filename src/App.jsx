@@ -160,7 +160,7 @@ export default function App() {
     el.addEventListener('touchmove', onMove, { passive: false })
     return () => el.removeEventListener('touchmove', onMove)
   }, [])
-  const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection, needsReview, markNeedsReview, clearNeedsReview } = useProgress()
+  const { progress, markCard, clearProgress, collected, addToCollection, removeFromCollection, clearCollection, needsReview, markNeedsReview, clearNeedsReview } = useProgress()
 
   // ── Preload all province/group IDs silently on startup ────────────────
   useEffect(() => {
