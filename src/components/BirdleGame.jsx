@@ -27,30 +27,16 @@ function getMysteryBird(species, dateStr) {
 // ~30 birds — spread across ancestor_ids groupings, mystery bird guaranteed included
 function getBirdPool(species, dateStr, mystery) {
   if (!mystery) return []
-  // Group by first letter of common name — guarantees alphabetic spread across the list
-  const byLetter = {}
-  for (const s of species) {
-    if (!s.taxon?.default_photo || !s.taxon?.ancestor_ids?.length) continue
-    const letter = (s.taxon?.preferred_common_name || s.taxon?.name || '')[0]?.toUpperCase()
-    if (!letter) continue
-    if (!byLetter[letter]) byLetter[letter] = []
-    byLetter[letter].push(s)
-  }
+  const eligible = species.filter(s => s.taxon?.default_photo && s.taxon?.ancestor_ids?.length)
+  const shuffled = seededShuffle(eligible, dateSeed(dateStr) + SEED_OFFSET + 999)
   const pool = new Map()
-  let gs = dateSeed(dateStr) + SEED_OFFSET + 999
-  for (const birds of Object.values(byLetter)) {
-    const b = seededShuffle(birds, gs++)[0]
-    pool.set(b.taxon.id, b)
+  for (const s of shuffled) {
+    if (pool.size >= 34) break
+    pool.set(s.taxon.id, s)
   }
-  pool.set(mystery.taxon.id, mystery) // always include the answer
+  pool.set(mystery.taxon.id, mystery) // always include
   const byName = (a, b) => (a.taxon?.preferred_common_name || '').localeCompare(b.taxon?.preferred_common_name || '')
-  const sorted = Array.from(pool.values()).sort(byName).slice(0, 35)
-  // If mystery was sliced off, swap it in and re-sort so it sits alphabetically
-  if (!sorted.find(s => s.taxon?.id === mystery.taxon.id)) {
-    sorted[sorted.length - 1] = mystery
-    sorted.sort(byName)
-  }
-  return sorted
+  return Array.from(pool.values()).sort(byName)
 }
 
 function loadState() {
