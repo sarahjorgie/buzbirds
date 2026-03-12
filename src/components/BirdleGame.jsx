@@ -258,22 +258,18 @@ function RoundRow({ round, birdPool, revealing }) {
     <div className="flex-1 flex gap-1 px-3">
       {['size','food','feet','habitat'].map((k, i) => (
         <div key={k}
-          className={`tile-reveal flex-1 flex items-center justify-center rounded-lg ${
+          className={`flex-1 flex items-center justify-center rounded-lg ${
             round.results[k] ? 'bg-green-700' : 'bg-slate-700/80'
-          }`}
-          style={{ animationDelay: revealing ? `${i * 180}ms` : '0ms',
-                   animationPlayState: revealing ? 'running' : 'paused',
-                   opacity: revealing ? undefined : 1 }}>
+          } ${revealing ? 'tile-reveal' : ''}`}
+          style={revealing ? { animationDelay: `${i * 180}ms` } : {}}>
           <SvgIcon value={round.answers[k]} size={26} color="white" />
         </div>
       ))}
       <div
-        className={`tile-reveal flex-[1.6] flex items-center justify-center rounded-lg px-2 min-w-0 ${
+        className={`flex-[1.6] flex items-center justify-center rounded-lg px-2 min-w-0 ${
           round.results.bird ? 'bg-green-700' : 'bg-slate-700/80'
-        }`}
-        style={{ animationDelay: revealing ? '720ms' : '0ms',
-                 animationPlayState: revealing ? 'running' : 'paused',
-                 opacity: revealing ? undefined : 1 }}>
+        } ${revealing ? 'tile-reveal' : ''}`}
+        style={revealing ? { animationDelay: '720ms' } : {}}>
         <p className="text-white text-[11px] font-medium leading-tight truncate text-center">{name}</p>
       </div>
     </div>
