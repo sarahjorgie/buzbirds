@@ -44,11 +44,13 @@ function getBirdPool(species, dateStr, mystery) {
     pool.set(b.taxon.id, b)
   }
   pool.set(mystery.taxon.id, mystery) // always include the answer
-  const sorted = Array.from(pool.values())
-    .sort((a, b) => (a.taxon?.preferred_common_name || '').localeCompare(b.taxon?.preferred_common_name || ''))
-    .slice(0, 35)
-  // Guarantee mystery survived the slice
-  if (!sorted.find(s => s.taxon?.id === mystery.taxon.id)) sorted[sorted.length - 1] = mystery
+  const byName = (a, b) => (a.taxon?.preferred_common_name || '').localeCompare(b.taxon?.preferred_common_name || '')
+  const sorted = Array.from(pool.values()).sort(byName).slice(0, 35)
+  // If mystery was sliced off, swap it in and re-sort so it sits alphabetically
+  if (!sorted.find(s => s.taxon?.id === mystery.taxon.id)) {
+    sorted[sorted.length - 1] = mystery
+    sorted.sort(byName)
+  }
   return sorted
 }
 
