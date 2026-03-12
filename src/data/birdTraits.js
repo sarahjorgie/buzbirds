@@ -1,10 +1,40 @@
 /**
- * Trait derivation from iNaturalist ancestor_ids.
- * Uses the verified taxon IDs from birdGroups.js to identify bird families,
- * then assigns traits based on well-known family characteristics.
- * ~85-90% accurate — good enough for a game, can be overridden per-bird later.
+ * Trait derivation for flashcard display (birdGroups ancestor_ids approach).
+ * For BuzBirdle, use fetchPoolTraits() which hits /v1/taxa to get the real
+ * iNaturalist family name, then looks up in familyTraits.js for accuracy.
  */
 import { BIRD_GROUPS } from './birdGroups'
+import FAMILY_TRAITS from './familyTraits'
+
+// ── Birdle: fetch accurate family-based traits for a pool of species ──────────
+const _familyCache = new Map() // taxonId → trait object
+
+export async function fetchPoolTraits(birdPool) {
+  if (!birdPool?.length) return {}
+
+  // Only fetch IDs we don't have yet
+  const needed = birdPool.map(s => s.taxon?.id).filter(id => id && !_familyCache.has(id))
+
+  // Batch in chunks of 30 (iNat API limit per request)
+  for (let i = 0; i < needed.length; i += 30) {
+    const chunk = needed.slice(i, i + 30)
+    try {
+      const res  = await fetch(`https://api.inaturalist.org/v1/taxa?id=${chunk.join(',')}`)
+      if (!res.ok) continue
+      const data = await res.json()
+      for (const taxon of data.results || []) {
+        const family = taxon.ancestors?.find(a => a.rank === 'family')?.name
+        const traits = family ? FAMILY_TRAITS[family] : null
+        _familyCache.set(taxon.id, traits ? { ...traits, family } : null)
+      }
+    } catch {}
+  }
+
+  // Build result map — include all pool birds (null if lookup failed)
+  return Object.fromEntries(
+    birdPool.map(s => [s.taxon?.id, _familyCache.get(s.taxon?.id) ?? null])
+  )
+}
 
 // Traits keyed by birdGroups id
 const TRAITS_BY_GROUP = {

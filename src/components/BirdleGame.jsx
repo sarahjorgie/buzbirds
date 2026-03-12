@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { getTraits } from '../data/birdTraits'
+import { fetchPoolTraits } from '../data/birdTraits'
 import { fetchBirdCall } from '../utils/xencanto'
 
-const MAX_GUESSES = 6
+const MAX_GUESSES = 5
 const STORAGE_KEY = 'buzbirds-birdle-v1'
 const SEED_OFFSET = 8317
 
@@ -24,19 +24,22 @@ function getMysteryBird(species, dateStr) {
   return seededShuffle(pool, dateSeed(dateStr) + SEED_OFFSET)[0] || null
 }
 
-// ~30 birds — one from each family group, mystery bird guaranteed included
+// ~30 birds — spread across ancestor_ids groupings, mystery bird guaranteed included
 function getBirdPool(species, dateStr, mystery) {
   if (!mystery) return []
-  const byGroup = {}
+  // Group by first ancestor above species level (rough family proxy from ancestor_ids)
+  const byAncestor = {}
   for (const s of species) {
-    const t = getTraits(s.taxon)
-    if (!t || !s.taxon?.default_photo) continue
-    if (!byGroup[t.groupId]) byGroup[t.groupId] = []
-    byGroup[t.groupId].push(s)
+    if (!s.taxon?.default_photo || !s.taxon?.ancestor_ids?.length) continue
+    // Use ancestor at index -3 as a rough family-level bucket
+    const ids   = s.taxon.ancestor_ids
+    const key   = ids[Math.max(0, ids.length - 3)]
+    if (!byAncestor[key]) byAncestor[key] = []
+    byAncestor[key].push(s)
   }
   const pool = new Map()
   let gs = dateSeed(dateStr) + SEED_OFFSET + 999
-  for (const birds of Object.values(byGroup)) {
+  for (const birds of Object.values(byAncestor)) {
     const b = seededShuffle(birds, gs++)[0]
     pool.set(b.taxon.id, b)
   }
@@ -54,38 +57,40 @@ function saveState(s) {
 }
 
 // ── SVG icon paths keyed by trait value ───────────────────────────────────────
-const ICONS = {
-  Seeds:    <><path d="M12 20V8"/><path d="M8.5 12l3.5-3.5 3.5 3.5"/><path d="M8.5 16l3.5-3.5 3.5 3.5"/><path d="M9 8l3-4 3 4"/></>,
-  Fish:     <><path d="M4 12C5 8 14 8 17 12C14 16 5 16 4 12Z"/><path d="M17 12L21 8V16Z"/></>,
-  Meat:     <><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="5.5" r="2"/></>,
-  Insects:  <><ellipse cx="12" cy="13" rx="3" ry="4"/><circle cx="12" cy="8" r="2"/><line x1="9" y1="11" x2="5" y2="8"/><line x1="9" y1="13.5" x2="4" y2="13.5"/><line x1="9" y1="16" x2="5" y2="19"/><line x1="15" y1="11" x2="19" y2="8"/><line x1="15" y1="13.5" x2="20" y2="13.5"/><line x1="15" y1="16" x2="19" y2="19"/></>,
-  Omnivore: <><circle cx="12" cy="12" r="7"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="9.5" y1="9.5" x2="14.5" y2="14.5"/><line x1="14.5" y1="9.5" x2="9.5" y2="14.5"/></>,
-  Fruit:    <><path d="M12 19C8.7 19 6 15.9 6 12c0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.9-2.7 7-6 7z"/><path d="M12 6V4"/><path d="M10 4c0-1 4-1.5 4 0"/></>,
-  Nectar:   <><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="5.5" rx="2" ry="3"/><ellipse cx="12" cy="18.5" rx="2" ry="3"/><ellipse cx="5.5" cy="12" rx="3" ry="2"/><ellipse cx="18.5" cy="12" rx="3" ry="2"/></>,
-  Tiny:     <><circle cx="13" cy="14" r="2"/><circle cx="14.5" cy="12" r="1"/><path d="M11 13.5L7 10l5 2z"/><path d="M15 12.5l2.5-1"/></>,
-  Small:    <><ellipse cx="12" cy="14" rx="3.5" ry="2.5"/><circle cx="14.5" cy="11" r="1.5"/><path d="M10 13L5 9l6 3z"/><path d="M15.5 11.5l3-1.5"/></>,
-  Medium:   <><ellipse cx="11" cy="14" rx="4.5" ry="3"/><circle cx="14.5" cy="10" r="2"/><path d="M9 12L3 8l7 3.5z"/><path d="M16 11l4-2"/></>,
-  Large:    <><ellipse cx="11" cy="15" rx="5.5" ry="3.5"/><circle cx="15" cy="9.5" r="2.5"/><path d="M8 13L2 8l8 4z"/><path d="M17 11l4-2"/></>,
-  Webbed:   <><path d="M12 20L5.5 10c2-2 13-2 13 0L12 20Z"/><path d="M7.5 11.5Q12 9 16.5 11.5"/><path d="M9 14.5Q12 13 15 14.5"/><path d="M10.5 17.5Q12 16.5 13.5 17.5"/></>,
-  Talons:   <><path d="M12 5C12 10 7 13 6 17"/><path d="M12 5C12 11 12 14 12 17"/><path d="M12 5C12 10 17 13 18 17"/><path d="M12 5C11 8.5 8 10 7.5 13"/></>,
-  Perching: <><line x1="3" y1="15" x2="21" y2="15"/><path d="M9 15l-2.5 5M12 15v5M15 15l2.5 5M10 15l-2-5"/><circle cx="12" cy="9" r="2.5"/></>,
-  Climbing: <><path d="M9.5 12L4 16.5M9.5 12L4 7.5M14.5 12L20 16.5M14.5 12L20 7.5"/><circle cx="12" cy="12" r="3"/></>,
-  Wading:   <><path d="M10 5L8 18"/><path d="M14 5L16 18"/><path d="M4 18Q12 21 20 18"/></>,
-  Wetland:  <><path d="M2 18Q5 14 8 18T14 18T20 18"/><line x1="8" y1="18" x2="7.5" y2="9"/><path d="M6.5 9L8 5L9.5 9Z"/><line x1="13" y1="18" x2="13.5" y2="9"/><path d="M12 9L13.5 5L15 9Z"/></>,
-  Forest:   <><path d="M8 20V13H4L12 4L20 13H16V20H8Z"/></>,
-  Savanna:  <><line x1="12" y1="20" x2="12" y2="10"/><path d="M5 10Q8.5 5 19 10Z"/><line x1="9" y1="15" x2="5" y2="19"/><line x1="15" y1="15" x2="19" y2="19"/></>,
-  Coastal:  <><path d="M2 18Q5 13 8 18T14 18T20 18"/><path d="M2 12Q5 7 8 12T14 12T20 12"/></>,
-  Urban:    <><rect x="3" y="8" width="8" height="12" rx="0.5"/><rect x="13" y="12" width="8" height="8" rx="0.5"/><rect x="5" y="11" width="1.5" height="2"/><rect x="8" y="11" width="1.5" height="2"/><rect x="5" y="15" width="1.5" height="2"/><rect x="8" y="15" width="1.5" height="2"/><rect x="15" y="15" width="1.5" height="2"/><rect x="18" y="15" width="1.5" height="2"/></>,
-  Woodland: <><circle cx="12" cy="9" r="6"/><rect x="11" y="15" width="2" height="5" rx="1"/></>,
-  Grassland:<><path d="M4 19C4 15 5.5 11 6.5 8"/><path d="M8.5 19C8.5 14 9.5 9 10.5 6"/><path d="M13.5 19C13.5 14 12.5 9 11.5 6"/><path d="M17.5 19C17.5 15 16 11 15 8"/><path d="M21 19C21 16 20 12 19 9"/></>,
-  Garden:   <><circle cx="12" cy="12" r="2.5"/><path d="M12 5.5V9M12 15V18.5M5.5 12H9M15 12H18.5M7.5 7.5L10 10M14 14L16.5 16.5M16.5 7.5L14 10M10 14L7.5 16.5"/></>,
+const ICON_PATHS = {
+  // Food
+  Insects:        <><ellipse cx="12" cy="13" rx="3" ry="4"/><circle cx="12" cy="8" r="2"/><line x1="9" y1="11" x2="5" y2="8"/><line x1="9" y1="13.5" x2="4" y2="13.5"/><line x1="9" y1="16" x2="5" y2="19"/><line x1="15" y1="11" x2="19" y2="8"/><line x1="15" y1="13.5" x2="20" y2="13.5"/><line x1="15" y1="16" x2="19" y2="19"/></>,
+  Fish:           <><path d="M4 12C5 8 14 8 17 12C14 16 5 16 4 12Z"/><path d="M17 12L21 8V16Z"/></>,
+  'Seeds/Grain':  <><path d="M12 20V8"/><path d="M8.5 12l3.5-3.5 3.5 3.5"/><path d="M8.5 16l3.5-3.5 3.5 3.5"/><path d="M9 8l3-4 3 4"/></>,
+  'Meat/Carrion': <><line x1="7" y1="17" x2="17" y2="7"/><circle cx="5.5" cy="18.5" r="2"/><circle cx="18.5" cy="5.5" r="2"/></>,
+  Nectar:         <><circle cx="12" cy="12" r="2.5"/><ellipse cx="12" cy="5.5" rx="2" ry="3"/><ellipse cx="12" cy="18.5" rx="2" ry="3"/><ellipse cx="5.5" cy="12" rx="3" ry="2"/><ellipse cx="18.5" cy="12" rx="3" ry="2"/></>,
+  Fruit:          <><path d="M12 19C8.7 19 6 15.9 6 12c0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.9-2.7 7-6 7z"/><path d="M12 6V4"/><path d="M10 4c0-1 4-1.5 4 0"/></>,
+  Omnivore:       <><circle cx="12" cy="12" r="7"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="9.5" y1="9.5" x2="14.5" y2="14.5"/><line x1="14.5" y1="9.5" x2="9.5" y2="14.5"/></>,
+  // Size
+  Tiny:           <><circle cx="13" cy="14" r="2"/><circle cx="14.5" cy="12" r="1"/><path d="M11 13.5L7 10l5 2z"/><path d="M15 12.5l2.5-1"/></>,
+  Small:          <><ellipse cx="12" cy="14" rx="3.5" ry="2.5"/><circle cx="14.5" cy="11" r="1.5"/><path d="M10 13L5 9l6 3z"/><path d="M15.5 11.5l3-1.5"/></>,
+  Medium:         <><ellipse cx="11" cy="14" rx="4.5" ry="3"/><circle cx="14.5" cy="10" r="2"/><path d="M9 12L3 8l7 3.5z"/><path d="M16 11l4-2"/></>,
+  Large:          <><ellipse cx="11" cy="15" rx="5.5" ry="3.5"/><circle cx="15" cy="9.5" r="2.5"/><path d="M8 13L2 8l8 4z"/><path d="M17 11l4-2"/></>,
+  // Feet
+  Webbed:         <><path d="M12 20L5.5 10c2-2 13-2 13 0L12 20Z"/><path d="M7.5 11.5Q12 9 16.5 11.5"/><path d="M9 14.5Q12 13 15 14.5"/><path d="M10.5 17.5Q12 16.5 13.5 17.5"/></>,
+  Talons:         <><path d="M12 5C12 10 7 13 6 17"/><path d="M12 5C12 11 12 14 12 17"/><path d="M12 5C12 10 17 13 18 17"/><path d="M12 5C11 8.5 8 10 7.5 13"/></>,
+  Perching:       <><line x1="3" y1="15" x2="21" y2="15"/><path d="M9 15l-2.5 5M12 15v5M15 15l2.5 5M10 15l-2-5"/><circle cx="12" cy="9" r="2.5"/></>,
+  Climbing:       <><path d="M9.5 12L4 16.5M9.5 12L4 7.5M14.5 12L20 16.5M14.5 12L20 7.5"/><circle cx="12" cy="12" r="3"/></>,
+  Wading:         <><path d="M10 5L8 18"/><path d="M14 5L16 18"/><path d="M4 18Q12 21 20 18"/></>,
+  // Habitat
+  'Grassland/Savanna': <><line x1="12" y1="20" x2="12" y2="10"/><path d="M5 10Q8.5 5 19 10Z"/><line x1="9" y1="15" x2="5" y2="19"/><line x1="15" y1="15" x2="19" y2="19"/></>,
+  'Forest/Woodland':   <><path d="M8 20V13H4L12 4L20 13H16V20H8Z"/></>,
+  'Wetland/Water':     <><path d="M2 18Q5 14 8 18T14 18T20 18"/><line x1="8" y1="18" x2="7.5" y2="9"/><path d="M6.5 9L8 5L9.5 9Z"/><line x1="13" y1="18" x2="13.5" y2="9"/><path d="M12 9L13.5 5L15 9Z"/></>,
+  'Coastal/Marine':    <><path d="M2 18Q5 13 8 18T14 18T20 18"/><path d="M2 12Q5 7 8 12T14 12T20 12"/></>,
+  'Urban/Garden':      <><rect x="3" y="8" width="8" height="12" rx="0.5"/><rect x="13" y="12" width="8" height="8" rx="0.5"/><rect x="5" y="11" width="1.5" height="2"/><rect x="8" y="11" width="1.5" height="2"/><rect x="5" y="15" width="1.5" height="2"/><rect x="8" y="15" width="1.5" height="2"/><rect x="15" y="15" width="1.5" height="2"/><rect x="18" y="15" width="1.5" height="2"/></>,
+  'Rocky/Cliff':       <><path d="M3 20L8 8L12 13L15 9L21 20H3Z"/></>,
 }
 
 function SvgIcon({ value, size = 24, color = 'currentColor' }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5"
          strokeLinecap="round" strokeLinejoin="round" style={{ width: size, height: size, flexShrink: 0 }}>
-      {ICONS[value] ?? null}
+      {ICON_PATHS[value] ?? null}
     </svg>
   )
 }
@@ -108,15 +113,15 @@ const CATEGORIES = {
     label: 'DIET',
     question: 'What does this bird mainly eat?',
     colLabel: 'Diet',
-    representative: 'Seeds',
+    representative: 'Seeds/Grain',
     options: [
-      { value: 'Fish'     },
-      { value: 'Fruit'    },
-      { value: 'Insects'  },
-      { value: 'Meat'     },
-      { value: 'Nectar'   },
-      { value: 'Omnivore' },
-      { value: 'Seeds'    },
+      { value: 'Fish'          },
+      { value: 'Fruit'         },
+      { value: 'Insects'       },
+      { value: 'Meat/Carrion'  },
+      { value: 'Nectar'        },
+      { value: 'Omnivore'      },
+      { value: 'Seeds/Grain'   },
     ],
   },
   feet: {
@@ -136,16 +141,14 @@ const CATEGORIES = {
     label: 'HABITAT',
     question: 'Where is this bird usually found?',
     colLabel: 'Habitat',
-    representative: 'Savanna',
+    representative: 'Grassland/Savanna',
     options: [
-      { value: 'Coastal'   },
-      { value: 'Forest'    },
-      { value: 'Garden'    },
-      { value: 'Grassland' },
-      { value: 'Savanna'   },
-      { value: 'Urban'     },
-      { value: 'Wetland'   },
-      { value: 'Woodland'  },
+      { value: 'Coastal/Marine'     },
+      { value: 'Forest/Woodland'    },
+      { value: 'Grassland/Savanna'  },
+      { value: 'Rocky/Cliff'        },
+      { value: 'Urban/Garden'       },
+      { value: 'Wetland/Water'      },
     ],
   },
 }
@@ -293,9 +296,16 @@ export default function BirdleGame({ species, onClose }) {
   const today     = todayStr()
   const yesterday = yesterdayStr()
 
-  const mystery       = useMemo(() => getMysteryBird(species, today), [species, today])
-  const mysteryTraits = useMemo(() => mystery ? getTraits(mystery.taxon) : null, [mystery])
-  const birdPool      = useMemo(() => getBirdPool(species, today, mystery), [species, today, mystery])
+  const mystery  = useMemo(() => getMysteryBird(species, today), [species, today])
+  const birdPool = useMemo(() => getBirdPool(species, today, mystery), [species, today, mystery])
+
+  const [poolTraits, setPoolTraits] = useState({})
+  useEffect(() => {
+    if (!birdPool.length) return
+    fetchPoolTraits(birdPool).then(setPoolTraits)
+  }, [birdPool])
+
+  const mysteryTraits = mystery?.taxon?.id ? (poolTraits[mystery.taxon.id] ?? null) : null
 
   const saved       = loadState()
   const playedToday = saved?.date === today
@@ -486,7 +496,10 @@ export default function BirdleGame({ species, onClose }) {
       {/* Guess button */}
       {gameState === 'playing' && (
         <div className="shrink-0 px-3 pb-5 pt-2 border-t border-white/10">
-          <button onClick={makeGuess} disabled={!allFilled}
+          {!mysteryTraits && (
+            <p className="text-white/40 text-xs text-center mb-2">Loading bird data…</p>
+          )}
+          <button onClick={makeGuess} disabled={!allFilled || !mysteryTraits}
             className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white font-bold text-base tracking-wide transition-colors">
             GUESS
           </button>
