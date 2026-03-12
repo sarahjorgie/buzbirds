@@ -3,7 +3,7 @@ import { fetchPoolTraits } from '../data/birdTraits'
 import { fetchBirdCall } from '../utils/xencanto'
 
 const MAX_GUESSES = 5
-const STORAGE_KEY = 'buzbirds-birdle-v1'
+const STORAGE_KEY = 'buzbirds-birdle-v2'
 const SEED_OFFSET = 8317
 
 function todayStr()     { return new Date().toISOString().slice(0, 10) }
@@ -300,13 +300,13 @@ export default function BirdleGame({ species, onClose }) {
   const mystery  = useMemo(() => getMysteryBird(species, today), [species, today])
   const birdPool = useMemo(() => getBirdPool(species, today, mystery), [species, today, mystery])
 
-  const [poolTraits, setPoolTraits] = useState({})
+  const [mysteryTraits, setMysteryTraits] = useState(null)
   useEffect(() => {
-    if (!birdPool.length) return
-    fetchPoolTraits(birdPool).then(setPoolTraits)
-  }, [birdPool])
-
-  const mysteryTraits = mystery?.taxon?.id ? (poolTraits[mystery.taxon.id] ?? null) : null
+    if (!mystery?.taxon?.id) return
+    fetchPoolTraits([mystery]).then(traits => {
+      setMysteryTraits(traits[mystery.taxon.id] ?? null)
+    })
+  }, [mystery?.taxon?.id])
 
   const saved       = loadState()
   const playedToday = saved?.date === today
