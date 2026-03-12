@@ -720,12 +720,13 @@ export default function App() {
           onMark={(id, status) => {
             if (status === 'known') {
               const taxon = current?.taxon
-              addToCollection(id, {
+              // Navigate first so the card exits before visibleDeck recomputes
+              swipeNavigate('left')
+              setTimeout(() => addToCollection(id, {
                 name:     taxon?.preferred_common_name || taxon?.name,
                 sciName:  taxon?.name,
                 photoUrl: taxon?.default_photo?.medium_url || taxon?.default_photo?.url,
-              })
-              setTimeout(handleNext, 300)
+              }), 320)
             } else {
               removeFromCollection(id)
             }
