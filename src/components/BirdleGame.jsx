@@ -188,20 +188,15 @@ function PickerModal({ catKey, birdPool, current, onSelect, onClose }) {
         <div className="overflow-y-auto px-4 pb-8 space-y-2">
           {isBird
             ? birdPool.map(s => {
-                const name    = s.taxon?.preferred_common_name || s.taxon?.name
-                const sci     = s.taxon?.name
-                const photo   = s.taxon?.default_photo?.square_url
-                const sel     = current.birdId === s.taxon?.id
+                const name = s.taxon?.preferred_common_name || s.taxon?.name
+                const sci  = s.taxon?.name
+                const sel  = current.birdId === s.taxon?.id
                 return (
                   <button key={s.taxon?.id}
                     onClick={() => { onSelect('birdId', s.taxon?.id); onClose() }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
+                    className={`w-full flex items-center px-4 py-3 rounded-xl text-left transition-colors ${
                       sel ? 'bg-slate-600 text-white' : 'bg-white text-slate-800 active:bg-slate-100'
                     }`}>
-                    {photo
-                      ? <img src={photo} alt={name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                      : <div className="w-10 h-10 rounded-lg bg-slate-200 shrink-0 flex items-center justify-center text-lg">🐦</div>
-                    }
                     <div className="min-w-0">
                       <p className="font-semibold text-sm leading-tight truncate">{name}</p>
                       <p className={`text-xs italic leading-tight ${sel ? 'text-white/60' : 'text-slate-400'}`}>{sci}</p>
@@ -240,9 +235,9 @@ function PickerModal({ catKey, birdPool, current, onSelect, onClose }) {
 function SelectorBtn({ catKey, value, onOpen }) {
   return (
     <button onClick={() => onOpen(catKey)}
-      className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 transition-colors ${
+      className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 transition-colors ${
         value ? 'border-green-500/50 bg-green-900/20' : 'border-dashed border-white/25 bg-white/[0.03]'
-      }`} style={{ minHeight: 54 }}>
+      }`}>
       {value
         ? <>
             <SvgIcon value={value} size={22} color="white" />
@@ -256,36 +251,30 @@ function SelectorBtn({ catKey, value, onOpen }) {
 
 // ── Result row (past rounds) ──────────────────────────────────────────────────
 function RoundRow({ round, birdPool, revealing }) {
-  // Use name/photo stored at guess time; fall back to birdPool lookup for old rounds
-  const bird  = round.birdName ? null : birdPool.find(s => s.taxon?.id === round.answers.birdId)
-  const name  = round.birdName || bird?.taxon?.preferred_common_name || bird?.taxon?.name || '?'
-  const photo = round.birdPhoto || bird?.taxon?.default_photo?.square_url
+  const bird = round.birdName ? null : birdPool.find(s => s.taxon?.id === round.answers.birdId)
+  const name = round.birdName || bird?.taxon?.preferred_common_name || bird?.taxon?.name || '?'
 
   return (
-    <div className="flex gap-1 px-3">
+    <div className="flex gap-1 px-3 h-full">
       {['size','food','feet','habitat'].map((k, i) => (
         <div key={k}
           className={`tile-reveal flex-1 flex items-center justify-center rounded-lg ${
             round.results[k] ? 'bg-green-700' : 'bg-slate-700/80'
           }`}
-          style={{ minHeight: 54, animationDelay: revealing ? `${i * 180}ms` : '0ms',
+          style={{ animationDelay: revealing ? `${i * 180}ms` : '0ms',
                    animationPlayState: revealing ? 'running' : 'paused',
                    opacity: revealing ? undefined : 1 }}>
           <SvgIcon value={round.answers[k]} size={26} color="white" />
         </div>
       ))}
       <div
-        className={`tile-reveal flex-[1.6] flex items-center gap-2 rounded-lg px-2 min-w-0 ${
+        className={`tile-reveal flex-[1.6] flex items-center justify-center rounded-lg px-2 min-w-0 ${
           round.results.bird ? 'bg-green-700' : 'bg-slate-700/80'
         }`}
-        style={{ minHeight: 54, animationDelay: revealing ? '720ms' : '0ms',
+        style={{ animationDelay: revealing ? '720ms' : '0ms',
                  animationPlayState: revealing ? 'running' : 'paused',
                  opacity: revealing ? undefined : 1 }}>
-        {photo
-          ? <img src={photo} alt={name} className="w-7 h-7 rounded-md object-cover shrink-0" />
-          : <div className="w-7 h-7 rounded-md bg-white/10 shrink-0" />
-        }
-        <p className="text-white text-[11px] font-medium leading-tight truncate">{name}</p>
+        <p className="text-white text-[11px] font-medium leading-tight truncate text-center">{name}</p>
       </div>
     </div>
   )
@@ -294,11 +283,11 @@ function RoundRow({ round, birdPool, revealing }) {
 // ── Empty placeholder row ─────────────────────────────────────────────────────
 function EmptyRow() {
   return (
-    <div className="flex gap-1 px-3">
+    <div className="flex gap-1 px-3 h-full">
       {[0,1,2,3].map(i => (
-        <div key={i} className="flex-1 rounded-lg border border-white/10 bg-white/[0.02]" style={{ minHeight: 54 }} />
+        <div key={i} className="flex-1 rounded-lg border border-white/10 bg-white/[0.02]" />
       ))}
-      <div className="flex-[1.6] rounded-lg border border-white/10 bg-white/[0.02]" style={{ minHeight: 54 }} />
+      <div className="flex-[1.6] rounded-lg border border-white/10 bg-white/[0.02]" />
     </div>
   )
 }
@@ -477,58 +466,48 @@ export default function BirdleGame({ species, onClose }) {
         <div className="flex-[1.6] text-center text-white/25 text-[9px] uppercase tracking-wide">Bird</div>
       </div>
 
-      {/* Rounds + empty slots */}
-      <div className="flex-1 overflow-y-auto py-1 space-y-1.5">
+      {/* Rows — always exactly MAX_GUESSES rows filling available height */}
+      <div className="flex-1 grid py-1.5 gap-1.5 min-h-0"
+           style={{ gridTemplateRows: `repeat(${MAX_GUESSES}, 1fr)` }}>
         {rounds.map((r, i) => <RoundRow key={i} round={r} birdPool={birdPool} revealing={i === revealingIdx} />)}
 
         {/* Active input row */}
         {gameState === 'playing' && (
-          <div className="flex gap-1 px-3">
+          <div className="flex gap-1 px-3 h-full">
             <SelectorBtn catKey="size"    value={current.size}    onOpen={setModal} />
             <SelectorBtn catKey="food"    value={current.food}    onOpen={setModal} />
             <SelectorBtn catKey="feet"    value={current.feet}    onOpen={setModal} />
             <SelectorBtn catKey="habitat" value={current.habitat} onOpen={setModal} />
             <button onClick={() => setModal('bird')}
-              className={`flex-[1.6] flex items-center gap-1.5 rounded-lg border-2 px-2 transition-colors ${
+              className={`flex-[1.6] flex items-center justify-center rounded-lg border-2 px-2 transition-colors ${
                 selectedBird ? 'border-green-500/50 bg-green-900/20' : 'border-dashed border-white/25 bg-white/[0.03]'
-              }`} style={{ minHeight: 54 }}>
+              }`}>
               {selectedBird
-                ? <>
-                    {selectedBird.taxon?.default_photo?.square_url && (
-                      <img src={selectedBird.taxon.default_photo.square_url} alt=""
-                           className="w-7 h-7 rounded-md object-cover shrink-0" />
-                    )}
-                    <span className="text-white text-[10px] font-medium leading-tight truncate">
-                      {selectedBird.taxon?.preferred_common_name || selectedBird.taxon?.name}
-                    </span>
-                  </>
-                : <span className="text-white/25 text-[10px] w-full text-center">tap to select</span>
+                ? <span className="text-white text-[10px] font-medium leading-tight truncate text-center px-1">
+                    {selectedBird.taxon?.preferred_common_name || selectedBird.taxon?.name}
+                  </span>
+                : <span className="text-white/25 text-[10px] text-center">tap to select</span>
               }
             </button>
           </div>
         )}
 
         {Array.from({ length: emptySlots }).map((_, i) => <EmptyRow key={i} />)}
-
-        {isGameOver && (
-          <div className="px-3 pt-2">
-            <button onClick={onClose} onMouseUp={e => e.currentTarget.blur()}
-              className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold transition-colors">
-              Back to Flashcards
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Guess button */}
-      {gameState === 'playing' && (
-        <div className="shrink-0 px-3 pb-5 pt-2 border-t border-white/10">
-            <button onClick={makeGuess} disabled={!allFilled}
-            className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white font-bold text-base tracking-wide transition-colors">
-            GUESS
-          </button>
-        </div>
-      )}
+      {/* Bottom action */}
+      <div className="shrink-0 px-3 pb-5 pt-2 border-t border-white/10">
+        {gameState === 'playing'
+          ? <button onClick={makeGuess} disabled={!allFilled}
+              className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white font-bold text-base tracking-wide transition-colors">
+              GUESS
+            </button>
+          : <button onClick={onClose} onMouseUp={e => e.currentTarget.blur()}
+              className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold transition-colors">
+              Back to Flashcards
+            </button>
+        }
+      </div>
 
       {/* Picker modal */}
       <PickerModal
