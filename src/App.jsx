@@ -5,7 +5,7 @@ import CardProgress from './components/CardProgress'
 import QuizMode from './components/QuizMode'
 import Collection from './components/Collection'
 import CollectionReview from './components/CollectionReview'
-import DailyChallenge from './components/DailyChallenge'
+import BirdleGame, { STORAGE_KEY as BIRDLE_KEY } from './components/BirdleGame'
 import { useProgress } from './hooks/useProgress'
 import WelcomeMessage, { hasSeenWelcome } from './components/WelcomeMessage'
 import { SA_PROVINCES } from './data/provinces'
@@ -124,11 +124,11 @@ export default function App() {
   const [quizOpen, setQuizOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [reviewOpen, setReviewOpen]         = useState(false)
-  const [dailyOpen, setDailyOpen]       = useState(false)
-  const [dailyDone, setDailyDone]       = useState(() => {
+  const [birdleOpen, setBirdleOpen]     = useState(false)
+  const [birdleDone, setBirdleDone]     = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('buzbirds-daily-v1'))
-      return s?.date === new Date().toISOString().slice(0, 10) && s?.completed
+      const s = JSON.parse(localStorage.getItem(BIRDLE_KEY))
+      return s?.date === new Date().toISOString().slice(0, 10) && s?.gameState !== 'playing'
     } catch { return false }
   })
   const [welcomeOpen, setWelcomeOpen]   = useState(() => !hasSeenWelcome())
@@ -160,7 +160,7 @@ export default function App() {
     el.addEventListener('touchmove', onMove, { passive: false })
     return () => el.removeEventListener('touchmove', onMove)
   }, [])
-  const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection, needsReview, markNeedsReview, clearNeedsReview } = useProgress()
+  const { progress, markCard, clearProgress, collected, addToCollection, removeFromCollection, clearCollection, needsReview, markNeedsReview, clearNeedsReview } = useProgress()
 
   // ── Preload all province/group IDs silently on startup ────────────────
   useEffect(() => {
@@ -489,19 +489,16 @@ export default function App() {
         />
       )}
 
-      {dailyOpen && (
-        <DailyChallenge
+      {birdleOpen && (
+        <BirdleGame
           species={species}
-          markNeedsReview={markNeedsReview}
-          clearNeedsReview={clearNeedsReview}
           onClose={() => {
-            setDailyOpen(false)
+            setBirdleOpen(false)
             try {
-              const s = JSON.parse(localStorage.getItem('buzbirds-daily-v1'))
-              setDailyDone(s?.date === new Date().toISOString().slice(0, 10) && s?.completed)
+              const s = JSON.parse(localStorage.getItem(BIRDLE_KEY))
+              setBirdleDone(s?.date === new Date().toISOString().slice(0, 10) && s?.gameState !== 'playing')
             } catch {}
           }}
-          addToCollection={addToCollection}
         />
       )}
 
@@ -657,14 +654,13 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setDailyOpen(true)}
-            className={`py-2.5 rounded-xl border font-medium transition-all flex flex-col items-center gap-1 text-xs ${dailyDone ? 'bg-white/10 hover:bg-white/15 border-white/10 hover:border-green-500/50 text-white' : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-500/50 text-orange-300 animate-pulse'}`}
+            onClick={() => setBirdleOpen(true)}
+            className={`py-2.5 rounded-xl border font-medium transition-all flex flex-col items-center gap-1 text-xs ${birdleDone ? 'bg-white/10 hover:bg-white/15 border-white/10 hover:border-green-500/50 text-white' : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-500/50 text-orange-300 animate-pulse'}`}
           >
-            {/* Sun/daily icon */}
             <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-            Daily
+            BuzBirdle
           </button>
 
           <button
@@ -724,12 +720,13 @@ export default function App() {
           onMark={(id, status) => {
             if (status === 'known') {
               const taxon = current?.taxon
-              addToCollection(id, {
+              // Navigate first so the card exits before visibleDeck recomputes
+              swipeNavigate('left')
+              setTimeout(() => addToCollection(id, {
                 name:     taxon?.preferred_common_name || taxon?.name,
                 sciName:  taxon?.name,
                 photoUrl: taxon?.default_photo?.medium_url || taxon?.default_photo?.url,
-              })
-              setTimeout(handleNext, 300)
+              }), 320)
             } else {
               removeFromCollection(id)
             }
