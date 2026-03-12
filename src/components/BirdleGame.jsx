@@ -27,19 +27,18 @@ function getMysteryBird(species, dateStr) {
 // ~30 birds — spread across ancestor_ids groupings, mystery bird guaranteed included
 function getBirdPool(species, dateStr, mystery) {
   if (!mystery) return []
-  // Group by first ancestor above species level (rough family proxy from ancestor_ids)
-  const byAncestor = {}
+  // Group by first letter of common name — guarantees alphabetic spread across the list
+  const byLetter = {}
   for (const s of species) {
     if (!s.taxon?.default_photo || !s.taxon?.ancestor_ids?.length) continue
-    // Use ancestor at index -3 as a rough family-level bucket
-    const ids   = s.taxon.ancestor_ids
-    const key   = ids[Math.max(0, ids.length - 3)]
-    if (!byAncestor[key]) byAncestor[key] = []
-    byAncestor[key].push(s)
+    const letter = (s.taxon?.preferred_common_name || s.taxon?.name || '')[0]?.toUpperCase()
+    if (!letter) continue
+    if (!byLetter[letter]) byLetter[letter] = []
+    byLetter[letter].push(s)
   }
   const pool = new Map()
   let gs = dateSeed(dateStr) + SEED_OFFSET + 999
-  for (const birds of Object.values(byAncestor)) {
+  for (const birds of Object.values(byLetter)) {
     const b = seededShuffle(birds, gs++)[0]
     pool.set(b.taxon.id, b)
   }
