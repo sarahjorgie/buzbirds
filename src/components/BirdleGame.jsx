@@ -372,6 +372,68 @@ export default function BirdleGame({ species, onClose }) {
   const mysteryPhoto = mystery?.taxon?.default_photo?.medium_url || mystery?.taxon?.default_photo?.url
   const mysteryName  = mystery?.taxon?.preferred_common_name || mystery?.taxon?.name
   const selectedBird = current.birdId ? birdPool.find(s => s.taxon?.id === current.birdId) : null
+  const score        = gameState === 'won' ? 5
+    : Math.max(0, ...rounds.map(r => Object.values(r.results).filter(Boolean).length))
+
+  // ── Completion screen ─────────────────────────────────────────────────────
+  if (revealed) return (
+    <div className="fixed inset-0 z-50 bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col"
+         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-white/10 shrink-0">
+        <button onClick={onClose} onMouseUp={e => e.currentTarget.blur()} className="text-white/50 hover:text-white">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div className="flex-1">
+          <h2 className="text-white font-bold text-lg tracking-tight">BuzBirdle</h2>
+          <p className="text-green-400 text-xs">{today}</p>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6">
+        {/* Streak */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center gap-2">
+            <svg className="w-8 h-8 text-orange-400" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-1.5-.5-3-1.5-4.5C15 8 14 10 12 11c0-3-1-6-1-9z" />
+            </svg>
+            <span className="text-orange-400 font-black text-5xl">{streak}</span>
+          </div>
+          <p className="text-white/50 text-sm">day streak</p>
+        </div>
+
+        {/* Score card */}
+        <div className="w-full rounded-2xl bg-white/10 px-6 py-5 flex flex-col items-center gap-2">
+          <p className="text-white/40 text-xs font-semibold tracking-widest uppercase">Today's Score</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-white font-black text-6xl">{score}</span>
+            <span className="text-white/40 text-2xl font-light">/ 5</span>
+          </div>
+          <p className="text-white/40 text-sm mt-1">
+            {gameState === 'won' ? `Got it in ${rounds.length} guess${rounds.length === 1 ? '' : 'es'}!` : 'Come back tomorrow for a new challenge'}
+          </p>
+        </div>
+
+        {/* Bird name reveal */}
+        {mysteryName && (
+          <p className="text-white/30 text-sm text-center">
+            The bird was <span className="text-white/60 font-semibold">{mysteryName}</span>
+          </p>
+        )}
+      </div>
+
+      {/* Back button */}
+      <div className="shrink-0 px-6 pb-8 pt-2">
+        <button onClick={onClose} onMouseUp={e => e.currentTarget.blur()}
+          className="w-full py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-semibold text-base transition-colors">
+          Back to Flashcards
+        </button>
+      </div>
+    </div>
+  )
 
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-green-950 via-green-900 to-emerald-950 flex flex-col"
