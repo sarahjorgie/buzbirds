@@ -657,8 +657,9 @@ export default function App() {
             onClick={() => setBirdleOpen(true)}
             className={`py-2.5 rounded-xl border font-medium transition-all flex flex-col items-center gap-1 text-xs ${birdleDone ? 'bg-white/10 hover:bg-white/15 border-white/10 hover:border-green-500/50 text-white' : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-500/50 text-orange-300 animate-pulse'}`}
           >
-            <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="4"/>
+              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
             </svg>
             BuzBirdle
           </button>
