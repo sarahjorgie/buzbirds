@@ -30,7 +30,7 @@ const PROVINCES = [
     name: 'North West',
     abbr: 'NW',
     // Diagonal Botswana border in the north
-    path: 'M114,150 L314,30 L286,105 L286,165 L171,165 L171,105 Z',
+    path: 'M114,150 L314,30 L286,105 L286,165 L171,165 Z',
     labelX: 218, labelY: 132,
   },
   {
@@ -53,14 +53,14 @@ const PROVINCES = [
     name: 'Northern Cape',
     abbr: 'NC',
     // Huge western province — Namibia/Botswana borders in NW, EC/WC/FS in east/south
-    path: 'M14,225 L114,150 L171,105 L171,255 L229,285 L171,345 L114,390 L57,390 L29,360 L14,315 Z',
+    path: 'M14,225 L114,150 L171,165 L171,255 L229,285 L171,345 L14,315 Z',
     labelX: 90, labelY: 248,
   },
   {
     key: 'easterncape',
     name: 'Eastern Cape',
     abbr: 'EC',
-    path: 'M229,285 L371,285 L400,405 L257,420 L114,405 L114,390 L171,345 Z',
+    path: 'M229,285 L371,285 L400,405 L257,420 L114,405 L171,345 Z',
     labelX: 272, labelY: 358,
   },
   {
@@ -68,8 +68,8 @@ const PROVINCES = [
     name: 'Western Cape',
     abbr: 'WC',
     // SW corner — shares NC border from 171,255 to 171,345 and coast
-    path: 'M14,315 L171,255 L171,345 L114,390 L57,390 L29,360 Z',
-    labelX: 80, labelY: 348,
+    path: 'M14,315 L171,345 L114,405 L57,390 L14,375 Z',
+    labelX: 72, labelY: 368,
   },
 ]
 

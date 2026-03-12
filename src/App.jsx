@@ -123,6 +123,12 @@ export default function App() {
   const [quizOpen, setQuizOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
   const [dailyOpen, setDailyOpen]       = useState(false)
+  const [dailyDone, setDailyDone]       = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('buzbirds-daily-v1'))
+      return s?.date === new Date().toISOString().slice(0, 10) && s?.completed
+    } catch { return false }
+  })
   const [welcomeOpen, setWelcomeOpen]   = useState(() => !hasSeenWelcome())
 
   const [cardAnim, setCardAnim] = useState({ x: 0, rotate: 0, transition: false })
@@ -242,7 +248,7 @@ export default function App() {
 
   // ── Filter changes — resolve IDs first, then fetch ────────────────────
   const handleFilterChange = useCallback(async ({ provinceKey, groupIds, tripKey }) => {
-    if (provinceKey !== undefined || tripKey !== undefined) setMenuOpen(false)
+    if (tripKey !== undefined && tripKey !== null) setMenuOpen(false)
 
     try {
       let placeId        = filters.placeId
@@ -470,7 +476,13 @@ export default function App() {
       {dailyOpen && (
         <DailyChallenge
           species={species}
-          onClose={() => setDailyOpen(false)}
+          onClose={() => {
+            setDailyOpen(false)
+            try {
+              const s = JSON.parse(localStorage.getItem('buzbirds-daily-v1'))
+              setDailyDone(s?.date === new Date().toISOString().slice(0, 10) && s?.completed)
+            } catch {}
+          }}
           addToCollection={addToCollection}
         />
       )}
@@ -536,6 +548,14 @@ export default function App() {
                   <span className="text-xs bg-white/10 text-white/50 px-2 py-0.5 rounded-full">
                     hiding {knownCount} known
                   </span>
+                )}
+                {filtersActive && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-white/40 hover:text-white/70 px-2 py-0.5 rounded-full border border-white/15 hover:border-white/30 transition-colors"
+                  >
+                    Clear all
+                  </button>
                 )}
               </div>
             </div>
@@ -620,7 +640,7 @@ export default function App() {
 
           <button
             onClick={() => setDailyOpen(true)}
-            className="py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 hover:border-green-500/50 text-white font-medium transition-all flex flex-col items-center gap-1 text-xs"
+            className={`py-2.5 rounded-xl border font-medium transition-all flex flex-col items-center gap-1 text-xs ${dailyDone ? 'bg-white/10 hover:bg-white/15 border-white/10 hover:border-green-500/50 text-white' : 'bg-orange-500/20 hover:bg-orange-500/30 border-orange-500/50 text-orange-300 animate-pulse'}`}
           >
             {/* Sun/daily icon */}
             <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

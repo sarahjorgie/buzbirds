@@ -42,7 +42,7 @@ function QuizPhoto({ src, alt, className }) {
       {errored ? (
         <div className="absolute inset-0 flex items-center justify-center text-gray-600 text-3xl">🐦</div>
       ) : (
-        <img src={src} alt={alt} className="w-full h-full object-cover"
+        <img src={src} alt={alt} className="w-full h-full object-contain"
           onLoad={() => setLoaded(true)} onError={() => setErrored(true)} />
       )}
     </div>
@@ -97,7 +97,7 @@ function CallQuestion({ question, feedbackState, onAnswer, onSkip }) {
         {/* Feedback overlay: reveal the bird photo */}
         {feedbackState && photoUrl && (
           <div className="absolute inset-0 overflow-hidden">
-            <img src={photoUrl} alt="" className="w-full h-full object-cover" />
+            <img src={photoUrl} alt="" className="w-full h-full object-contain" />
             <div className={`absolute inset-0 flex items-center justify-center ${feedbackState.isCorrect ? 'bg-green-900/70' : 'bg-red-900/70'}`}>
               <div className="text-center">
                 <div className="text-5xl mb-2">{feedbackState.isCorrect ? '✓' : '✗'}</div>

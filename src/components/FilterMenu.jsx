@@ -121,6 +121,26 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
     onFilterChange({ groupIds: next.length === 0 ? ['all'] : next })
   }
 
+  const getCategoryProgress = (catId) => {
+    const taxonIds = new Set(BIRD_GROUPS.filter(g => g.category === catId).map(g => g.taxonId))
+    const catSpecies = deck.filter(s => s.taxon?.ancestor_ids?.some(id => taxonIds.has(id)))
+    const known = catSpecies.filter(s => progress[s.taxon?.id] === 'known').length
+    return { known, total: catSpecies.length }
+  }
+
+  const toggleCategory = (catId) => {
+    const catGroupIds = BIRD_GROUPS.filter(g => g.category === catId).map(g => g.id)
+    const current = activeGroupIds.filter(g => g !== 'all')
+    const allSelected = catGroupIds.every(id => current.includes(id))
+    if (allSelected) {
+      const next = current.filter(id => !catGroupIds.includes(id))
+      onFilterChange({ groupIds: next.length === 0 ? ['all'] : next })
+    } else {
+      const next = [...new Set([...current, ...catGroupIds])]
+      onFilterChange({ groupIds: next })
+    }
+  }
+
   return (
     <>
       {/* Backdrop */}
@@ -316,10 +336,49 @@ export default function FilterMenu({ open, onClose, filters, onFilterChange, pro
                 const groups = BIRD_GROUPS.filter(g => g.category === catId)
                 return (
                   <div key={catId} className="mb-4">
-                    <div className="flex items-center gap-2 px-1 mb-1.5">
-                      <Icon className="w-4 h-4 text-white/40" />
-                      <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">{label}</p>
-                    </div>
+                    {(() => {
+                      const { known, total } = getCategoryProgress(catId)
+                      const pct = total > 0 ? (known / total) * 100 : 0
+                      return (
+                        <div className="px-1 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <Icon className="w-4 h-4 text-white/40" />
+                            <p className="text-xs font-semibold text-white/40 uppercase tracking-wider flex-1">{label}</p>
+                            {total > 0 && (
+                              <span className="text-xs text-white/25">{known}/{total}</span>
+                            )}
+                            {(() => {
+                                const allSelected = BIRD_GROUPS.filter(g => g.category === catId).every(g => activeGroupIds.includes(g.id))
+                                return (
+                                  <button
+                                    onClick={() => toggleCategory(catId)}
+                                    title={allSelected ? 'Deselect all' : 'Select all'}
+                                    className={`w-5 h-5 rounded flex items-center justify-center transition-colors border ${allSelected ? 'border-green-500 bg-green-900/60 text-green-400 hover:bg-red-900/40 hover:border-red-500 hover:text-red-400' : 'border-white/20 text-white/30 hover:border-green-500 hover:text-green-400'}`}
+                                  >
+                                    {allSelected ? (
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8l4 4 8-8M4 16l4 4 8-8" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                )
+                              })()}
+                          </div>
+                          {total > 0 && (
+                            <div className="mt-1.5 h-0.5 rounded-full bg-white/10 overflow-hidden">
+                              <div
+                                className="h-full bg-green-500/50 rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                     <div className="space-y-1">
                       {groups.map(group => {
                         const isSelected = activeGroupIds.includes(group.id)
