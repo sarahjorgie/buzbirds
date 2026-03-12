@@ -44,9 +44,12 @@ function getBirdPool(species, dateStr, mystery) {
     pool.set(b.taxon.id, b)
   }
   pool.set(mystery.taxon.id, mystery) // always include the answer
-  return Array.from(pool.values())
+  const sorted = Array.from(pool.values())
     .sort((a, b) => (a.taxon?.preferred_common_name || '').localeCompare(b.taxon?.preferred_common_name || ''))
     .slice(0, 35)
+  // Guarantee mystery survived the slice
+  if (!sorted.find(s => s.taxon?.id === mystery.taxon.id)) sorted[sorted.length - 1] = mystery
+  return sorted
 }
 
 function loadState() {
@@ -252,7 +255,7 @@ function SelectorBtn({ catKey, value, onOpen }) {
 }
 
 // ── Result row (past rounds) ──────────────────────────────────────────────────
-function RoundRow({ round, birdPool }) {
+function RoundRow({ round, birdPool, revealing }) {
   // Use name/photo stored at guess time; fall back to birdPool lookup for old rounds
   const bird  = round.birdName ? null : birdPool.find(s => s.taxon?.id === round.answers.birdId)
   const name  = round.birdName || bird?.taxon?.preferred_common_name || bird?.taxon?.name || '?'
@@ -260,16 +263,24 @@ function RoundRow({ round, birdPool }) {
 
   return (
     <div className="flex gap-1 px-3">
-      {['size','food','feet','habitat'].map(k => (
-        <div key={k} className={`flex-1 flex items-center justify-center rounded-lg ${
-          round.results[k] ? 'bg-green-700' : 'bg-slate-700/80'
-        }`} style={{ minHeight: 54 }}>
+      {['size','food','feet','habitat'].map((k, i) => (
+        <div key={k}
+          className={`tile-reveal flex-1 flex items-center justify-center rounded-lg ${
+            round.results[k] ? 'bg-green-700' : 'bg-slate-700/80'
+          }`}
+          style={{ minHeight: 54, animationDelay: revealing ? `${i * 180}ms` : '0ms',
+                   animationPlayState: revealing ? 'running' : 'paused',
+                   opacity: revealing ? undefined : 1 }}>
           <SvgIcon value={round.answers[k]} size={26} color="white" />
         </div>
       ))}
-      <div className={`flex-[1.6] flex items-center gap-2 rounded-lg px-2 min-w-0 ${
-        round.results.bird ? 'bg-green-700' : 'bg-slate-700/80'
-      }`} style={{ minHeight: 54 }}>
+      <div
+        className={`tile-reveal flex-[1.6] flex items-center gap-2 rounded-lg px-2 min-w-0 ${
+          round.results.bird ? 'bg-green-700' : 'bg-slate-700/80'
+        }`}
+        style={{ minHeight: 54, animationDelay: revealing ? '720ms' : '0ms',
+                 animationPlayState: revealing ? 'running' : 'paused',
+                 opacity: revealing ? undefined : 1 }}>
         {photo
           ? <img src={photo} alt={name} className="w-7 h-7 rounded-md object-cover shrink-0" />
           : <div className="w-7 h-7 rounded-md bg-white/10 shrink-0" />
@@ -321,8 +332,9 @@ export default function BirdleGame({ species, onClose }) {
   const [current,   setCurrent]   = useState({ size: null, food: null, feet: null, habitat: null, birdId: null })
   const [modal,     setModal]     = useState(null)
   const [revealed,  setRevealed]  = useState(playedToday && saved?.gameState !== 'playing')
-  const [callUrl,   setCallUrl]   = useState(null)
-  const [playing,   setPlaying]   = useState(false)
+  const [callUrl,      setCallUrl]      = useState(null)
+  const [playing,      setPlaying]      = useState(false)
+  const [revealingIdx, setRevealingIdx] = useState(-1)
   const audioRef = useRef(null)
 
   const isGameOver = gameState === 'won' || gameState === 'lost'
@@ -376,6 +388,8 @@ export default function BirdleGame({ species, onClose }) {
       setStreak(newStreak); setLastWon(newLastWon)
     }
 
+    setRevealingIdx(newRounds.length - 1)
+    setTimeout(() => setRevealingIdx(-1), 5 * 200 + 500)
     setRounds(newRounds)
     setGameState(newState)
     if (newState === 'playing') setCurrent({ size: null, food: null, feet: null, habitat: null, birdId: null })
@@ -414,10 +428,10 @@ export default function BirdleGame({ species, onClose }) {
       </div>
 
       {/* Mystery bird */}
-      <div className="relative shrink-0 overflow-hidden bg-black/40" style={{ height: 160 }}>
+      <div className="relative shrink-0 overflow-hidden bg-black/40" style={{ height: 200 }}>
         {mysteryPhoto
           ? <img src={mysteryPhoto} alt={revealed ? mysteryName : 'Mystery bird'}
-                 className={`w-full h-full object-cover transition-all duration-1000 ${revealed ? '' : 'blur-sm scale-105'}`} />
+                 className={`w-full h-full object-cover object-center transition-all duration-1000 ${revealed ? '' : 'blur-md scale-110'}`} />
           : <div className="w-full h-full bg-green-950/60" />
         }
         {/* Dark vignette so text is readable */}
@@ -465,7 +479,7 @@ export default function BirdleGame({ species, onClose }) {
 
       {/* Rounds + empty slots */}
       <div className="flex-1 overflow-y-auto py-1 space-y-1.5">
-        {rounds.map((r, i) => <RoundRow key={i} round={r} birdPool={birdPool} />)}
+        {rounds.map((r, i) => <RoundRow key={i} round={r} birdPool={birdPool} revealing={i === revealingIdx} />)}
 
         {/* Active input row */}
         {gameState === 'playing' && (
