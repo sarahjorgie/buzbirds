@@ -416,9 +416,8 @@ export default function BirdleGame({ species, onClose }) {
       <div className="relative shrink-0 overflow-hidden bg-black/40" style={{ height: 200 }}>
         {mysteryPhoto
           ? <img src={mysteryPhoto} alt={revealed ? mysteryName : 'Mystery bird'}
-                 className="w-full h-full object-cover object-center transition-all duration-1000"
-                 style={{ filter: revealed ? 'none' : `blur(${Math.max(0, 18 - rounds.length * 4)}px)`,
-                          transform: revealed ? 'none' : `scale(${1.08 - rounds.length * 0.01})` }} />
+                 className="w-full h-full object-contain transition-all duration-1000"
+                 style={{ filter: revealed ? 'none' : `blur(${Math.max(0, 18 - rounds.length * 4)}px)` }} />
           : <div className="w-full h-full bg-green-950/60" />
         }
         {/* Dark vignette so text is readable */}
