@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { fetchPoolTraits } from '../data/birdTraits'
+import { fetchPoolTraits, getTraits } from '../data/birdTraits'
 import { fetchBirdCall } from '../utils/xencanto'
 
 const MAX_GUESSES = 5
@@ -300,12 +300,15 @@ export default function BirdleGame({ species, onClose }) {
   const mystery  = useMemo(() => getMysteryBird(species, today), [species, today])
   const birdPool = useMemo(() => getBirdPool(species, today, mystery), [species, today, mystery])
 
-  const [mysteryTraits, setMysteryTraits] = useState(null)
+  // Use instant ancestor-based traits immediately; upgrade to accurate family traits when API resolves
+  const [mysteryTraits, setMysteryTraits] = useState(() => mystery ? getTraits(mystery.taxon) : null)
   useEffect(() => {
     if (!mystery?.taxon?.id) return
+    setMysteryTraits(getTraits(mystery.taxon)) // instant fallback
     fetchPoolTraits([mystery]).then(traits => {
-      setMysteryTraits(traits[mystery.taxon.id] ?? null)
-    })
+      const t = traits[mystery.taxon.id]
+      if (t) setMysteryTraits(t) // upgrade to accurate if API returned a match
+    }).catch(() => {})
   }, [mystery?.taxon?.id])
 
   const saved       = loadState()
@@ -414,7 +417,7 @@ export default function BirdleGame({ species, onClose }) {
       <div className="relative shrink-0 overflow-hidden bg-black/40" style={{ height: 160 }}>
         {mysteryPhoto
           ? <img src={mysteryPhoto} alt={revealed ? mysteryName : 'Mystery bird'}
-                 className={`w-full h-full object-cover transition-all duration-1000 ${revealed ? '' : 'blur-xl scale-110'}`} />
+                 className={`w-full h-full object-cover transition-all duration-1000 ${revealed ? '' : 'blur-sm scale-105'}`} />
           : <div className="w-full h-full bg-green-950/60" />
         }
         {/* Dark vignette so text is readable */}
@@ -506,10 +509,7 @@ export default function BirdleGame({ species, onClose }) {
       {/* Guess button */}
       {gameState === 'playing' && (
         <div className="shrink-0 px-3 pb-5 pt-2 border-t border-white/10">
-          {!mysteryTraits && (
-            <p className="text-white/40 text-xs text-center mb-2">Loading bird data…</p>
-          )}
-          <button onClick={makeGuess} disabled={!allFilled || !mysteryTraits}
+            <button onClick={makeGuess} disabled={!allFilled}
             className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white font-bold text-base tracking-wide transition-colors">
             GUESS
           </button>
