@@ -360,7 +360,7 @@ function EndScreen({ score, total, onRetry, onClose }) {
 }
 
 // ── Main QuizMode ─────────────────────────────────────────────────────────
-export default function QuizMode({ species, deck, progress, onClose, onMarkKnown, addToCollection }) {
+export default function QuizMode({ species, deck, progress, onClose, onMarkKnown, addToCollection, markNeedsReview, clearNeedsReview }) {
   const [phase, setPhase]   = useState('setup')
   const [config, setConfig] = useState({ quizType: 'name', questionCount: 20, unknownOnly: true })
   const [questions, setQuestions]         = useState([])
@@ -392,14 +392,17 @@ export default function QuizMode({ species, deck, progress, onClose, onMarkKnown
   const handleAnswer = (choiceIndex) => {
     if (feedbackState) return
     const isCorrect = choiceIndex === current.correctIndex
+    const taxon = current.correct.taxon
     if (isCorrect) {
       setScore(s => s + 1)
-      const taxon = current.correct.taxon
       addToCollection?.(taxon?.id, {
         name:     taxon?.preferred_common_name || taxon?.name,
         sciName:  taxon?.name,
         photoUrl: taxon?.default_photo?.medium_url || taxon?.default_photo?.url,
       })
+      clearNeedsReview?.(taxon?.id)
+    } else {
+      markNeedsReview?.(taxon?.id)
     }
     setFeedbackState({ selectedIndex: choiceIndex, isCorrect })
   }

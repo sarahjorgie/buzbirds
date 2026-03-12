@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-function CollectedCard({ bird, onRemove }) {
+function CollectedCard({ bird, onRemove, flagged, onDismissFlag }) {
   const [imgErr, setImgErr] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
@@ -16,11 +16,22 @@ function CollectedCard({ bird, onRemove }) {
       ) : (
         <div className="w-full h-full flex items-center justify-center text-3xl opacity-30">🐦</div>
       )}
+
+      {/* Red review reminder tint — tap to dismiss */}
+      {flagged && !confirming && (
+        <button
+          onClick={() => onDismissFlag(bird.id)}
+          className="absolute inset-0 bg-red-500/20 w-full h-full"
+          aria-label="Dismiss review reminder"
+        />
+      )}
+
       {/* Name overlay */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent px-1.5 pt-4 pb-1.5">
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent px-1.5 pt-4 pb-1.5 pointer-events-none">
         <p className="text-white text-[10px] font-medium leading-tight truncate">{bird.name}</p>
       </div>
-      {/* Remove button — tap × to confirm, tap again to remove */}
+
+      {/* Remove button — top-right */}
       {!confirming ? (
         <button
           onClick={() => setConfirming(true)}
@@ -62,7 +73,7 @@ function EmptyCard() {
   )
 }
 
-export default function Collection({ collected, totalSpecies, onClose, onClearCollection, onRemoveBird }) {
+export default function Collection({ collected, totalSpecies, onClose, onClearCollection, onRemoveBird, onReview, needsReview, onDismissFlag }) {
   const birds = Object.values(collected).sort((a, b) => b.collectedAt.localeCompare(a.collectedAt))
   const count = birds.length
 
@@ -89,7 +100,15 @@ export default function Collection({ collected, totalSpecies, onClose, onClearCo
           <h2 className="text-white font-bold text-xl">My Collection</h2>
           <p className="text-green-400 text-xs">{count} of {totalSpecies} birds identified</p>
         </div>
-        <div className="text-right shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {count > 0 && (
+            <button
+              onClick={onReview}
+              className="px-3 py-1.5 rounded-lg bg-green-600/80 hover:bg-green-600 text-white text-xs font-semibold transition-colors"
+            >
+              Review
+            </button>
+          )}
           <p className="text-2xl font-bold text-white">{pct}%</p>
         </div>
       </div>
@@ -120,7 +139,13 @@ export default function Collection({ collected, totalSpecies, onClose, onClearCo
         <div className="flex-1 overflow-y-auto px-3 py-3">
           <div className="grid grid-cols-3 gap-2">
             {birds.map(bird => (
-              <CollectedCard key={bird.id} bird={bird} onRemove={onRemoveBird} />
+              <CollectedCard
+                key={bird.id}
+                bird={bird}
+                onRemove={onRemoveBird}
+                flagged={!!needsReview?.[bird.id]}
+                onDismissFlag={onDismissFlag}
+              />
             ))}
             {Array.from({ length: empties }).map((_, i) => (
               <EmptyCard key={`empty-${i}`} />

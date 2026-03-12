@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const PROGRESS_KEY   = 'bird-flashcard-progress'
-const COLLECTION_KEY = 'buzbirds-collection'
+const PROGRESS_KEY    = 'bird-flashcard-progress'
+const COLLECTION_KEY  = 'buzbirds-collection'
+const NEEDS_REVIEW_KEY = 'buzbirds-needs-review-v1'
 
 export function useProgress() {
   const [progress, setProgress] = useState(() => {
@@ -24,6 +25,11 @@ export function useProgress() {
     } catch { return {} }
   })
 
+  const [needsReview, setNeedsReview] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(NEEDS_REVIEW_KEY)) || {} }
+    catch { return {} }
+  })
+
   useEffect(() => {
     try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)) } catch {}
   }, [progress])
@@ -31,6 +37,10 @@ export function useProgress() {
   useEffect(() => {
     try { localStorage.setItem(COLLECTION_KEY, JSON.stringify(collected)) } catch {}
   }, [collected])
+
+  useEffect(() => {
+    try { localStorage.setItem(NEEDS_REVIEW_KEY, JSON.stringify(needsReview)) } catch {}
+  }, [needsReview])
 
   // ── Unified: adding to collection also marks as known ───────────────────
   const addToCollection = useCallback((taxonId, birdData) => {
@@ -77,19 +87,38 @@ export function useProgress() {
     })
   }, [])
 
+  const markNeedsReview = useCallback((taxonId) => {
+    if (!taxonId) return
+    setNeedsReview(prev => prev[taxonId] ? prev : { ...prev, [taxonId]: true })
+  }, [])
+
+  const clearNeedsReview = useCallback((taxonId) => {
+    if (!taxonId) return
+    setNeedsReview(prev => {
+      if (!prev[taxonId]) return prev
+      const next = { ...prev }
+      delete next[taxonId]
+      return next
+    })
+  }, [])
+
   // Clears both progress and collection
   const clearProgress = useCallback(() => {
     setProgress({})
     setCollected({})
+    setNeedsReview({})
     localStorage.removeItem(PROGRESS_KEY)
     localStorage.removeItem(COLLECTION_KEY)
+    localStorage.removeItem(NEEDS_REVIEW_KEY)
   }, [])
 
   const clearCollection = useCallback(() => {
     setCollected({})
     setProgress({})
+    setNeedsReview({})
     localStorage.removeItem(COLLECTION_KEY)
     localStorage.removeItem(PROGRESS_KEY)
+    localStorage.removeItem(NEEDS_REVIEW_KEY)
   }, [])
 
   const getStats = useCallback((deck) => {
@@ -102,5 +131,6 @@ export function useProgress() {
   return {
     progress, markCard, clearProgress, getStats,
     collected, addToCollection, removeFromCollection, clearCollection,
+    needsReview, markNeedsReview, clearNeedsReview,
   }
 }

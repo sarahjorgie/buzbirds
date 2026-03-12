@@ -9,6 +9,7 @@ export default function CardProgress({ taxonId, status, onMark }) {
         {/* Mark as Known */}
         <button
           onClick={() => onMark(taxonId, isKnown ? null : 'known')}
+          onMouseUp={e => e.currentTarget.blur()}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition-all ${
             isKnown
               ? 'bg-green-600 border-green-600 text-white'
@@ -25,6 +26,7 @@ export default function CardProgress({ taxonId, status, onMark }) {
         {isKnown && (
           <button
             onClick={() => onMark(taxonId, null)}
+            onMouseUp={e => e.currentTarget.blur()}
             title="Remove from known"
             className="w-11 flex items-center justify-center rounded-xl border border-white/10 text-white/30 hover:border-white/30 hover:text-white/60 transition-all"
           >

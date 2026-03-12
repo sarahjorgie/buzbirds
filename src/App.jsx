@@ -4,6 +4,7 @@ import FilterMenu from './components/FilterMenu'
 import CardProgress from './components/CardProgress'
 import QuizMode from './components/QuizMode'
 import Collection from './components/Collection'
+import CollectionReview from './components/CollectionReview'
 import DailyChallenge from './components/DailyChallenge'
 import { useProgress } from './hooks/useProgress'
 import WelcomeMessage, { hasSeenWelcome } from './components/WelcomeMessage'
@@ -122,6 +123,7 @@ export default function App() {
   const [hideKnown, setHideKnown]       = useState(true)
   const [quizOpen, setQuizOpen]         = useState(false)
   const [collectionOpen, setCollectionOpen] = useState(false)
+  const [reviewOpen, setReviewOpen]         = useState(false)
   const [dailyOpen, setDailyOpen]       = useState(false)
   const [dailyDone, setDailyDone]       = useState(() => {
     try {
@@ -158,7 +160,7 @@ export default function App() {
     el.addEventListener('touchmove', onMove, { passive: false })
     return () => el.removeEventListener('touchmove', onMove)
   }, [])
-  const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection } = useProgress()
+  const { progress, clearProgress, collected, addToCollection, removeFromCollection, clearCollection, needsReview, markNeedsReview, clearNeedsReview } = useProgress()
 
   // ── Preload all province/group IDs silently on startup ────────────────
   useEffect(() => {
@@ -460,6 +462,8 @@ export default function App() {
           onClose={() => setQuizOpen(false)}
           onMarkKnown={(id) => markCard(id, 'known')}
           addToCollection={addToCollection}
+          markNeedsReview={markNeedsReview}
+          clearNeedsReview={clearNeedsReview}
         />
       )}
 
@@ -470,12 +474,26 @@ export default function App() {
           onClose={() => setCollectionOpen(false)}
           onClearCollection={clearCollection}
           onRemoveBird={removeFromCollection}
+          onReview={() => { setCollectionOpen(false); setReviewOpen(true) }}
+          needsReview={needsReview}
+          onDismissFlag={clearNeedsReview}
+        />
+      )}
+
+      {reviewOpen && (
+        <CollectionReview
+          collected={collected}
+          onClose={() => { setReviewOpen(false); setCollectionOpen(true) }}
+          markNeedsReview={markNeedsReview}
+          clearNeedsReview={clearNeedsReview}
         />
       )}
 
       {dailyOpen && (
         <DailyChallenge
           species={species}
+          markNeedsReview={markNeedsReview}
+          clearNeedsReview={clearNeedsReview}
           onClose={() => {
             setDailyOpen(false)
             try {
@@ -720,18 +738,18 @@ export default function App() {
 
         {/* Nav controls */}
         <div className="w-full max-w-md mt-3 flex items-center gap-3">
-          <button onClick={handlePrev} className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center justify-center gap-2">
+          <button onClick={handlePrev} onMouseUp={e => e.currentTarget.blur()} className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center justify-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
             Prev
           </button>
 
-          <button onClick={() => setFlipped(f => !f)} className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold transition-colors">
+          <button onClick={() => setFlipped(f => !f)} onMouseUp={e => e.currentTarget.blur()} className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-semibold transition-colors">
             {flipped ? 'Hide' : 'Reveal'}
           </button>
 
-          <button onClick={handleNext} className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center justify-center gap-2">
+          <button onClick={handleNext} onMouseUp={e => e.currentTarget.blur()} className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-colors flex items-center justify-center gap-2">
             Next
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

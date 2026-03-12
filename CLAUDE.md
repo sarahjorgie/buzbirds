@@ -50,10 +50,19 @@ All utilities use **in-memory Maps** as session caches — fetch once per taxon 
 
 Note: `xencanto.js` is misnamed — it was originally Xeno-canto but was rewritten to use iNaturalist sounds due to CORS issues. Xeno-canto is not used.
 
+`distractors.js` (no API) — picks wrong-answer candidates for QuizMode; prefers same bird-group birds to make quizzes harder, falls back to others.
+
 ### Static data
 
 - `src/data/provinces.js` — 9 SA provinces with **hardcoded, verified iNaturalist place IDs** (admin_level=10). Do not change these without re-verifying via the iNat API.
 - `src/data/birdGroups.js` — 16 bird family/order groups with verified iNaturalist taxon IDs.
+- `src/data/tripDestinations.js` — curated SA birding destinations (national parks, reserves, hotspots) with verified iNaturalist place IDs. Trip Mode uses these as an alternative place filter.
+
+### Major components
+
+- `QuizMode.jsx` — photo-ID multiple-choice quiz; uses `distractors.js` and seeded shuffle for reproducibility.
+- `SAMap.jsx` — SVG choropleth of SA provinces showing where the current bird has been observed.
+- `Collection.jsx` — grid of all collected birds, accessible from the progress bar.
 
 ### Key UI patterns
 

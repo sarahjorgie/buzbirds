@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import TileInput from './TileInput'
 
 const STORAGE_KEY = 'buzbirds-daily-v1'
 
@@ -44,34 +45,6 @@ function getDailyBirds(species, dateStr) {
   return shuffled.slice(0, 5)
 }
 
-// Normalize: lowercase, trim, remove hyphens/dashes, collapse spaces
-function normalize(str) {
-  return (str || '').toLowerCase().trim().replace(/[-–']/g, ' ').replace(/\s+/g, ' ')
-}
-
-// Levenshtein distance
-function levenshtein(a, b) {
-  const m = a.length, n = b.length
-  const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)])
-  for (let j = 0; j <= n; j++) dp[0][j] = j
-  for (let i = 1; i <= m; i++)
-    for (let j = 1; j <= n; j++)
-      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])
-  return dp[m][n]
-}
-
-function isCorrectAnswer(input, taxon) {
-  const guess = normalize(input)
-  if (!guess) return false
-  const common = normalize(taxon?.preferred_common_name || '')
-  const sci    = normalize(taxon?.name || '')
-  // Exact match
-  if (guess === common || guess === sci) return true
-  // Allow up to 2 typos for names of 8+ chars, 1 typo for shorter
-  const tolerance = common.length >= 8 ? 2 : 1
-  if (levenshtein(guess, common) <= tolerance) return true
-  return false
-}
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -104,7 +77,7 @@ function QuizPhoto({ src, alt, className }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function DailyChallenge({ species, onClose, addToCollection }) {
+export default function DailyChallenge({ species, onClose, addToCollection, markNeedsReview, clearNeedsReview }) {
   const today     = todayStr()
   const yesterday = yesterdayStr()
 
@@ -113,13 +86,11 @@ export default function DailyChallenge({ species, onClose, addToCollection }) {
     return saved || { date: null, completed: false, score: 0, streak: 0, lastCompletedDate: null }
   })
 
-  const [phase, setPhase]       = useState('intro')
-  const [birds, setBirds]       = useState([])
-  const [qIndex, setQIndex]     = useState(0)
-  const [score, setScore]       = useState(0)
-  const [userInput, setUserInput] = useState('')
+  const [phase, setPhase]   = useState('intro')
+  const [birds, setBirds]   = useState([])
+  const [qIndex, setQIndex] = useState(0)
+  const [score, setScore]   = useState(0)
   const [feedback, setFeedback] = useState(null) // null | { isCorrect, correctName }
-  const inputRef = useRef(null)
 
   const alreadyDoneToday = daily.date === today && daily.completed
 
@@ -128,35 +99,29 @@ export default function DailyChallenge({ species, onClose, addToCollection }) {
     setBirds(getDailyBirds(species, today))
   }, [species.length])
 
-  // Auto-focus input when question changes
-  useEffect(() => {
-    if (phase === 'quiz' && !feedback) {
-      setTimeout(() => inputRef.current?.focus(), 100)
-    }
-  }, [phase, qIndex, feedback])
-
   const startQuiz = () => {
     setQIndex(0)
     setScore(0)
-    setUserInput('')
     setFeedback(null)
     setPhase('quiz')
   }
 
-  const handleSubmit = () => {
-    if (feedback || !userInput.trim()) return
+  const handleAnswer = (isCorrect) => {
+    if (feedback) return
     const current = birds[qIndex]
-    const isCorrect = isCorrectAnswer(userInput, current?.taxon)
+    const taxon = current?.taxon
     if (isCorrect) {
       setScore(s => s + 1)
-      const taxon = current.taxon
       addToCollection(taxon?.id, {
         name:     taxon?.preferred_common_name || taxon?.name,
         sciName:  taxon?.name,
         photoUrl: taxon?.default_photo?.medium_url || taxon?.default_photo?.url,
       })
+      clearNeedsReview?.(taxon?.id)
+    } else {
+      markNeedsReview?.(taxon?.id)
     }
-    setFeedback({ isCorrect, correctName: current?.taxon?.preferred_common_name || current?.taxon?.name })
+    setFeedback({ isCorrect, correctName: taxon?.preferred_common_name || taxon?.name })
   }
 
   // Auto-advance after feedback
@@ -164,7 +129,6 @@ export default function DailyChallenge({ species, onClose, addToCollection }) {
     if (!feedback) return
     const t = setTimeout(() => {
       setFeedback(null)
-      setUserInput('')
       if (qIndex + 1 >= birds.length) {
         const finalScore = score + (feedback.isCorrect ? 1 : 0)
         const streakContinues = daily.lastCompletedDate === yesterday
@@ -291,34 +255,21 @@ export default function DailyChallenge({ species, onClose, addToCollection }) {
                 <div className={`absolute inset-0 flex items-center justify-center ${feedback.isCorrect ? 'bg-green-900/80' : 'bg-red-900/80'}`}>
                   <div className="text-center px-6">
                     <div className="text-5xl mb-3">{feedback.isCorrect ? '✓' : '✗'}</div>
-                    <p className="text-white font-semibold text-lg">{feedback.correctName}</p>
-                    {!feedback.isCorrect && userInput.trim() && (
-                      <p className="text-white/50 text-sm mt-1">You typed: "{userInput}"</p>
+                    {!feedback.isCorrect && (
+                      <p className="text-white font-semibold text-lg">{feedback.correctName}</p>
                     )}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Text input */}
-            <div className="p-4 shrink-0 space-y-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={userInput}
-                onChange={e => setUserInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
-                placeholder="Type the bird name…"
-                disabled={!!feedback}
-                className="w-full bg-white/10 text-white placeholder-white/30 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+            {/* Tile input */}
+            <div className="p-4 shrink-0">
+              <TileInput
+                name={current?.taxon?.preferred_common_name || current?.taxon?.name}
+                questionKey={`${today}-${qIndex}`}
+                onSubmit={handleAnswer}
               />
-              <button
-                onClick={handleSubmit}
-                disabled={!!feedback || !userInput.trim()}
-                className="w-full py-3 rounded-xl bg-green-600 hover:bg-green-500 disabled:bg-white/10 disabled:text-white/30 text-white font-semibold transition-colors"
-              >
-                Submit
-              </button>
             </div>
           </div>
         </>
