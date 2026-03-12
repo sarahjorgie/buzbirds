@@ -235,7 +235,7 @@ function PickerModal({ catKey, birdPool, current, onSelect, onClose }) {
 function SelectorBtn({ catKey, value, onOpen }) {
   return (
     <button onClick={() => onOpen(catKey)}
-      className={`flex-1 h-full flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 transition-colors ${
+      className={`flex-1 flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 transition-colors ${
         value ? 'border-green-500/50 bg-green-900/20' : 'border-dashed border-white/25 bg-white/[0.03]'
       }`}>
       {value
@@ -255,7 +255,7 @@ function RoundRow({ round, birdPool, revealing }) {
   const name = round.birdName || bird?.taxon?.preferred_common_name || bird?.taxon?.name || '?'
 
   return (
-    <div className="flex gap-1 px-3 h-full">
+    <div className="flex-1 flex gap-1 px-3">
       {['size','food','feet','habitat'].map((k, i) => (
         <div key={k}
           className={`tile-reveal flex-1 flex items-center justify-center rounded-lg ${
@@ -283,11 +283,11 @@ function RoundRow({ round, birdPool, revealing }) {
 // ── Empty placeholder row ─────────────────────────────────────────────────────
 function EmptyRow() {
   return (
-    <div className="flex gap-1 px-3 h-full">
+    <div className="flex-1 flex gap-1 px-3">
       {[0,1,2,3].map(i => (
-        <div key={i} className="flex-1 rounded-lg border border-white/10 bg-white/[0.02]" />
+        <div key={i} className="flex-1 rounded-lg border border-white/15 bg-white/[0.04]" />
       ))}
-      <div className="flex-[1.6] rounded-lg border border-white/10 bg-white/[0.02]" />
+      <div className="flex-[1.6] rounded-lg border border-white/15 bg-white/[0.04]" />
     </div>
   )
 }
@@ -466,14 +466,13 @@ export default function BirdleGame({ species, onClose }) {
         <div className="flex-[1.6] text-center text-white/25 text-[9px] uppercase tracking-wide">Bird</div>
       </div>
 
-      {/* Rows — always exactly MAX_GUESSES rows filling available height */}
-      <div className="flex-1 grid py-1.5 gap-1.5 min-h-0"
-           style={{ gridTemplateRows: `repeat(${MAX_GUESSES}, 1fr)` }}>
+      {/* Rows — flex column, each row gets equal share of remaining height */}
+      <div className="flex-1 min-h-0 flex flex-col gap-1.5 py-1.5">
         {rounds.map((r, i) => <RoundRow key={i} round={r} birdPool={birdPool} revealing={i === revealingIdx} />)}
 
         {/* Active input row */}
         {gameState === 'playing' && (
-          <div className="flex gap-1 px-3 h-full">
+          <div className="flex-1 flex gap-1 px-3">
             <SelectorBtn catKey="size"    value={current.size}    onOpen={setModal} />
             <SelectorBtn catKey="food"    value={current.food}    onOpen={setModal} />
             <SelectorBtn catKey="feet"    value={current.feet}    onOpen={setModal} />
