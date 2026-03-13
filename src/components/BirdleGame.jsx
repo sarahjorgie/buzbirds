@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { fetchPoolTraits, getTraits } from '../data/birdTraits'
+import { getTraits } from '../data/birdTraits'
 import { fetchBirdCall } from '../utils/xencanto'
 
 const MAX_GUESSES = 5
@@ -8,7 +8,12 @@ const SEED_OFFSET = 8317
 
 function todayStr()     { return new Date().toISOString().slice(0, 10) }
 function yesterdayStr() { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10) }
-function dateSeed(s)    { return parseInt(s.replace(/-/g, ''), 10) }
+// Days since epoch — used to index into a fixed shuffle so birds never repeat
+// within pool.length days (~962 days ≈ 2.6 years)
+function dayIndex(dateStr) {
+  const epoch = new Date('2024-01-01').getTime()
+  return Math.floor((new Date(dateStr).getTime() - epoch) / 86400000)
+}
 
 function seededShuffle(arr, seed) {
   const a = [...arr]; let s = seed | 0 || 1
@@ -22,14 +27,16 @@ function seededShuffle(arr, seed) {
 function getMysteryBird(species, dateStr) {
   // Only use birds that have a valid trait lookup — otherwise the game is unplayable
   const pool = species.filter(s => s.taxon?.default_photo && s.taxon?.ancestor_ids?.length > 0 && getTraits(s.taxon))
-  return seededShuffle(pool, dateSeed(dateStr) + SEED_OFFSET)[0] || null
+  // Fixed shuffle (same order every day) — pick by day index, no repeats for pool.length days
+  const shuffled = seededShuffle(pool, SEED_OFFSET)
+  return shuffled[dayIndex(dateStr) % shuffled.length] || null
 }
 
 // ~30 birds — spread across ancestor_ids groupings, mystery bird guaranteed included
 function getBirdPool(species, dateStr, mystery) {
   if (!mystery) return []
   const eligible = species.filter(s => s.taxon?.default_photo && s.taxon?.ancestor_ids?.length)
-  const shuffled = seededShuffle(eligible, dateSeed(dateStr) + SEED_OFFSET + 999)
+  const shuffled = seededShuffle(eligible, dayIndex(dateStr) + SEED_OFFSET + 999)
   const pool = new Map()
   for (const s of shuffled) {
     if (pool.size >= 34) break
@@ -284,16 +291,8 @@ export default function BirdleGame({ species, onClose }) {
   const mystery  = useMemo(() => getMysteryBird(species, today), [species, today])
   const birdPool = useMemo(() => getBirdPool(species, today, mystery), [species, today, mystery])
 
-  // Use instant ancestor-based traits immediately; upgrade to accurate family traits when API resolves
-  const [mysteryTraits, setMysteryTraits] = useState(() => mystery ? getTraits(mystery.taxon) : null)
-  useEffect(() => {
-    if (!mystery?.taxon?.id) return
-    setMysteryTraits(getTraits(mystery.taxon)) // instant fallback
-    fetchPoolTraits([mystery]).then(traits => {
-      const t = traits[mystery.taxon.id]
-      if (t) setMysteryTraits(t) // upgrade to accurate if API returned a match
-    }).catch(() => {})
-  }, [mystery?.taxon?.id])
+  // Family-level traits from static ID map — accurate, zero API calls
+  const mysteryTraits = useMemo(() => mystery ? getTraits(mystery.taxon) : null, [mystery])
 
   const saved       = loadState()
   const playedToday = saved?.date === today
@@ -317,10 +316,6 @@ export default function BirdleGame({ species, onClose }) {
     if (!mystery?.taxon?.id) return
     fetchBirdCall(mystery.taxon.id).then(r => { if (r?.url) setCallUrl(r.url) })
   }, [mystery?.taxon?.id])
-
-  useEffect(() => {
-    if (isGameOver) setTimeout(() => setRevealed(true), 400)
-  }, [isGameOver])
 
   const handlePlayCall = () => {
     if (!callUrl) return
@@ -365,7 +360,7 @@ export default function BirdleGame({ species, onClose }) {
     setTimeout(() => setRevealingIdx(-1), 5 * 200 + 500)
     setRounds(newRounds)
     setGameState(newState)
-    if (newState === 'playing') setCurrent({ size: null, food: null, feet: null, habitat: null, birdId: null })
+    setCurrent({ size: null, food: null, feet: null, habitat: null, birdId: null })
     saveState({ date: today, rounds: newRounds, gameState: newState, streak: newStreak, lastWon: newLastWon })
   }
 
@@ -467,18 +462,18 @@ export default function BirdleGame({ species, onClose }) {
         {mysteryPhoto
           ? <img src={mysteryPhoto} alt={revealed ? mysteryName : 'Mystery bird'}
                  className="w-full h-full object-contain transition-all duration-1000"
-                 style={{ filter: revealed ? 'none' : `blur(${Math.max(0, 18 - rounds.length * 4)}px)` }} />
+                 style={{ filter: (isGameOver || revealed) ? 'none' : `blur(${Math.max(0, 18 - rounds.length * 4)}px)` }} />
           : <div className="w-full h-full bg-green-950/60" />
         }
         {/* Dark vignette so text is readable */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
 
-        {!revealed && (
+        {!isGameOver && !revealed && (
           <div className="absolute bottom-2 left-3">
             <span className="text-white/40 text-xs font-medium tracking-wide">Who am I?</span>
           </div>
         )}
-        {revealed && (
+        {(isGameOver || revealed) && (
           <div className="absolute inset-0 flex items-end px-3 pb-2">
             <div>
               <p className={`font-bold text-base leading-tight ${gameState === 'won' ? 'text-green-400' : 'text-white'}`}>
