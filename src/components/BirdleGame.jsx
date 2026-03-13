@@ -20,7 +20,8 @@ function seededShuffle(arr, seed) {
 }
 
 function getMysteryBird(species, dateStr) {
-  const pool = species.filter(s => s.taxon?.default_photo && s.taxon?.ancestor_ids?.length > 0).slice(0, 500)
+  // Only use birds that have a valid trait lookup — otherwise the game is unplayable
+  const pool = species.filter(s => s.taxon?.default_photo && s.taxon?.ancestor_ids?.length > 0 && getTraits(s.taxon))
   return seededShuffle(pool, dateSeed(dateStr) + SEED_OFFSET)[0] || null
 }
 
@@ -335,14 +336,14 @@ export default function BirdleGame({ species, onClose }) {
   }
 
   const makeGuess = () => {
-    if (!allFilled || gameState !== 'playing') return
+    if (!allFilled || gameState !== 'playing' || !mysteryTraits) return
     const guessedBird = birdPool.find(s => s.taxon?.id === current.birdId)
     const results = {
-      size:    mysteryTraits ? current.size    === mysteryTraits.size    : false,
-      food:    mysteryTraits ? current.food    === mysteryTraits.food    : false,
-      feet:    mysteryTraits ? current.feet    === mysteryTraits.feet    : false,
-      habitat: mysteryTraits ? current.habitat === mysteryTraits.habitat : false,
-      bird:    current.birdId === mystery?.taxon?.id,
+      size:    current.size    === mysteryTraits.size,
+      food:    current.food    === mysteryTraits.food,
+      feet:    current.feet    === mysteryTraits.feet,
+      habitat: current.habitat === mysteryTraits.habitat,
+      bird:    current.birdId  === mystery?.taxon?.id,
     }
     const newRounds = [...rounds, {
       answers: { ...current },
