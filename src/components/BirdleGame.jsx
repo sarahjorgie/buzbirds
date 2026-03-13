@@ -288,8 +288,10 @@ export default function BirdleGame({ species, onClose }) {
   const today     = todayStr()
   const yesterday = yesterdayStr()
 
-  const mystery  = useMemo(() => getMysteryBird(species, today), [species, today])
-  const birdPool = useMemo(() => getBirdPool(species, today, mystery), [species, today, mystery])
+  // Snapshot species on mount — prevents mystery bird changing as more pages load
+  const [lockedSpecies] = useState(() => species)
+  const mystery  = useMemo(() => getMysteryBird(lockedSpecies, today), [lockedSpecies, today])
+  const birdPool = useMemo(() => getBirdPool(lockedSpecies, today, mystery), [lockedSpecies, today, mystery])
 
   // Family-level traits from static ID map — accurate, zero API calls
   const mysteryTraits = useMemo(() => mystery ? getTraits(mystery.taxon) : null, [mystery])
@@ -413,11 +415,22 @@ export default function BirdleGame({ species, onClose }) {
           </p>
         </div>
 
-        {/* Bird name reveal */}
-        {mysteryName && (
-          <p className="text-white/30 text-sm text-center">
-            The bird was <span className="text-white/60 font-semibold">{mysteryName}</span>
-          </p>
+        {/* Bird photo + name */}
+        {mysteryPhoto && (
+          <div className="w-full rounded-2xl overflow-hidden relative" style={{ height: 200 }}>
+            <img src={mysteryPhoto} alt={mysteryName} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            <div className="absolute bottom-0 left-0 px-4 pb-3">
+              <p className={`font-bold text-base leading-tight ${gameState === 'won' ? 'text-green-400' : 'text-white'}`}>
+                {mysteryName}
+              </p>
+              {mysteryTraits && (
+                <p className="text-white/50 text-[10px]">
+                  {mysteryTraits.size} · {mysteryTraits.food} · {mysteryTraits.feet} · {mysteryTraits.habitat}
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </div>
 
